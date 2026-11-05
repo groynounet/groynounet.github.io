@@ -59,6 +59,10 @@ svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .leaflet-control-attribution{font-size:10px;background:color-mix(in srgb,var(--surface) 80%,transparent)!important;color:var(--muted)}
 .leaflet-control-attribution a{color:var(--muted)}
 .leaflet-bottom{bottom:calc(var(--tabh) + var(--sab))}
+/* Fond OpenStreetMap assombri en mode sombre */
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .osm-tiles{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.6)} }
+:root[data-theme="dark"] .osm-tiles{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.6)}
+@media (max-width:380px){ .pill.count{display:none} .floatbar{gap:6px} .pill{padding:0 12px} }
 
 /* ---------- En-tête carte ---------- */
 .topbar{position:fixed;top:0;left:0;right:0;z-index:20;padding:calc(var(--sat) + 8px) max(12px,var(--sar)) 8px max(12px,var(--sal));
@@ -287,7 +291,7 @@ textarea,.field input,.field select{width:100%;border:0;background:transparent;o
 "use strict";
 /* =====================================================================
    Sortir à Limoges — app web personnelle
-   Données : © contributeurs OpenStreetMap (API Overpass), fond de carte CARTO.
+   Données : © contributeurs OpenStreetMap (API Overpass), fond de carte OpenStreetMap.
    Tout ce qui est personnel (favoris, notes, agenda) reste dans ce navigateur.
    ===================================================================== */
 
@@ -598,11 +602,10 @@ map.attributionControl.setPrefix(false);
 const dark=matchMedia("(prefers-color-scheme: dark)");
 let tiles;
 function setTiles(){
-  if(tiles) map.removeLayer(tiles);
-  const style = dark.matches ? "dark_all" : "rastertiles/voyager";
-  tiles=L.tileLayer(`https://{s}.basemaps.cartocdn.com/${style}/{z}/{x}/{y}{r}.png`,{
-    subdomains:"abcd",maxZoom:20,detectRetina:false,
-    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>'
+  if(tiles) return;
+  tiles=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    maxZoom:19, className:"osm-tiles",
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">contributeurs OpenStreetMap</a>'
   }).addTo(map);
 }
 setTiles(); dark.addEventListener?.("change",setTiles);
