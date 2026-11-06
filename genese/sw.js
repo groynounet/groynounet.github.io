@@ -1,5 +1,5 @@
 // Genèse : garde le jeu jouable hors ligne.
-const VERSION = "genese-v2";
+const VERSION = "genese-v3";
 const SHELL = ["./", "index.html", "icon.png", "manifest.webmanifest"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

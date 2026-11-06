@@ -169,6 +169,10 @@ h4{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--mut);
 .wslot canvas{width:46px;height:46px}
 .wslot.full{border-style:solid}
 .lockc{opacity:.55}
+.gmg{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.gmg .btn{font-size:13px;padding:9px 10px}
+.gmsel{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}
+.gmsel select{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:7px 8px;font:inherit;font-size:13px}
 .exp{background:var(--panel2);border-radius:12px;padding:9px 10px;margin-top:8px;display:flex;align-items:center;gap:10px;font-size:13px}
 .exp .f{flex:1;min-width:0}
 .calg{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
@@ -246,6 +250,7 @@ ul.intro li{margin:7px 0}
     <button class="hb" id="hCal">🎁<i class="dot hidden" id="dCal"></i></button>
     <button class="hb" id="hQ">📜<i class="dot hidden" id="dQ"></i></button>
     <button class="hb lvb" id="hAcc">Nv <span id="accL">1</span></button>
+    <button class="hb hidden" id="hGM" title="Maître du jeu">🛠️</button>
   </div></header>
   <main>
     <section id="viv" class="screen on">
@@ -1184,6 +1189,56 @@ function openProfile(){const L=S.acc.lvl;
   $('#pReset').onclick=()=>{if(confirm('Effacer toute ta progression ?')&&confirm('Vraiment ? Cette action est définitive.')){localStorage.removeItem(KEY);location.reload()}}}
 $('#hCal').onclick=openCal;$('#hQ').onclick=()=>openQuests('q');$('#hAcc').onclick=openProfile;$('#hCur').onclick=openProfile;
 
+
+/* --- Mode maître du jeu --- */
+let gmTaps=0,gmTimer=null;
+$('.logo').addEventListener('click',()=>{gmTaps++;clearTimeout(gmTimer);gmTimer=setTimeout(()=>gmTaps=0,1500);if(gmTaps>=5){gmTaps=0;S.gm=!S.gm;save();updGM();toast(S.gm?'🛠️ Mode maître du jeu activé':'Mode maître du jeu désactivé');if(S.gm)openGM()}});
+function updGM(){$('#hGM').classList.toggle('hidden',!S.gm)}
+$('#hGM').onclick=()=>openGM();
+function gmDone(msg){updRes();save();renderChips();vResize();refresh();toast('🛠️ '+msg)}
+function openGM(){
+  const opt=(a,v)=>a.map((x,i)=>`<option value="${i}" ${i===v?'selected':''}>${x}</option>`).join('');
+  openModal(`${head2('🛠️ Maître du jeu')}<p class="mut sm">Panneau de test. Tape 5 fois sur le logo GENÈSE pour l'afficher ou le masquer.</p>
+   <h4>Créer une créature</h4><div class="gmsel">
+    <select id="gE1">${opt(EL.map(e=>e.name),0)}</select><select id="gE2">${opt(EL.map(e=>e.name),0)}</select>
+    <select id="gM">${opt(MORPH.map(m=>m.name),0)}</select><select id="gR">${opt(RAR.map(r=>r.n),4)}</select>
+    <select id="gL">${opt([1,3,6,10,14,20,30,40].map(l=>'Niveau '+l),5)}</select><button class="btn sm" id="gMk">Créer</button></div>
+   <h4>Raccourcis</h4><div class="gmg">
+    <button class="btn gold" data-g="res">💰 +100 000 ◆ ● et +10 000 ♦</button>
+    <button class="btn" data-g="acc">🏅 Niveau de compte 10 (tout débloqué)</button>
+    <button class="btn" data-g="prog">🗺️ Débloquer biomes et campagne</button>
+    <button class="btn" data-g="best">📖 Bestiaire complet (105)</button>
+    <button class="btn" data-g="items">🎒 Équipement de chaque rareté</button>
+    <button class="btn" data-g="shards">✧ Éclats prêts à fusionner</button>
+    <button class="btn" data-g="food">🍎 +20 fruits de chaque élément</button>
+    <button class="btn" data-g="lvl">✨ Toutes mes créatures niveau 15</button>
+    <button class="btn" data-g="eggs">🥚 Remplir la couveuse (prête)</button>
+    <button class="btn" data-g="time">⏩ Tout terminer (œufs, cultures, expéditions, mines, repos)</button>
+    <button class="btn" data-g="cal">🎁 Rejouer la récompense du jour</button>
+    <button class="btn" data-g="cal28">★ Aller au jour 28 du calendrier</button>
+    <button class="btn" data-g="quests">📜 Valider les quêtes du jour</button>
+    <button class="btn sec" data-g="night">🌙 Basculer jour / nuit</button>
+    <button class="btn red" data-g="off">Désactiver le mode maître du jeu</button></div>`,true);
+  $('#gMk').onclick=()=>{const e1=+$('#gE1').value,e2=+$('#gE2').value,m=+$('#gM').value,r=+$('#gR').value,L=[1,3,6,10,14,20,30,40][+$('#gL').value];
+    const g=newGenome(r,e1,e2);g.m=m;const c=makeCreature(g,{lvl:L});S.crea.push(c);if(V.BW)placeCreature(c);discover(c.g,true);closeModal();gmDone(`${esc(c.name)} créé`);reveal(c,false,{kind:'gift',rar:r})};
+  $('#modal').querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{const k=b.dataset.g,now=Date.now();
+    if(k==='res'){S.ess+=100000;S.gold+=100000;S.cry+=10000;gmDone('Ressources ajoutées')}
+    else if(k==='acc'){if(S.acc.lvl<10){S.acc.lvl=10;S.acc.xp=0}gmDone('Niveau de compte 10')}
+    else if(k==='prog'){S.prog=Math.max(S.prog,10);gmDone('Biomes et campagne débloqués')}
+    else if(k==='best'){for(let m=0;m<5;m++)for(let a=0;a<6;a++)for(let b2=a;b2<6;b2++){const g=newGenome(1,a,b2);g.m=m;discover(g,true)}gmDone('Bestiaire complet')}
+    else if(k==='items'){for(let r=0;r<5;r++)for(let s2=0;s2<4;s2++)S.items.push(genItem(r,s2));gmDone('20 objets ajoutés')}
+    else if(k==='shards'){[[3,0,4],[4,5,1],[2,2,2]].forEach(([r,a,b2])=>{const g=newGenome(r,a,b2);addShards(g,r,NEED[r])});gmDone('Éclats ajoutés (onglet Œufs)')}
+    else if(k==='food'){S.food=S.food.map(n=>n+20);gmDone('Fruits ajoutés')}
+    else if(k==='lvl'){S.crea.forEach(c=>{if(c.lvl<15){c.lvl=15;c.xp=0;c.stage=stageFor(15)}});gmDone('Créatures au niveau 15')}
+    else if(k==='eggs'){while(S.eggs.length<slotsN()){const r=Math.floor(R()*5);S.eggs.push({g:newGenome(r,Math.floor(R()*6),Math.floor(R()*6)),kind:r>=3?'anc':'std',ready:now-1,gen:1,parents:null})}gmDone('Couveuse remplie')}
+    else if(k==='time'){S.eggs.forEach(e=>e.ready=now-1);S.farm.plots.forEach(p=>{if(p)p.end=now-1});S.exps.forEach(x=>x.end=now-1);S.crea.forEach(c=>{c.cd=0;if(c.away)c.away=now-1});
+      [[S.mine,'g'],[S.cmine,'c']].forEach(([m,kd])=>{updMine(m,kd);m.stock=mineCap(m,kd)});gmDone('Tout est terminé')}
+    else if(k==='cal'){calSync();S.cal.last='';gmDone('Récompense du jour disponible')}
+    else if(k==='cal28'){calSync();S.cal.n=27;S.cal.last='';gmDone('Calendrier au jour 28')}
+    else if(k==='quests'){ensureQuests();S.q.list.forEach(q=>q.p=q.g);gmDone('Quêtes validées')}
+    else if(k==='night'){const f=isNightAmt()>.25;isNightAmt=()=>f?0:1;gmDone(f?'Jour forcé':'Nuit forcée')}
+    else if(k==='off'){S.gm=false;save();updGM();closeModal();toast('Mode maître du jeu désactivé')}})}
+
 /* ================= Combats ================= */
 const region=n=>n<=2?0:n<=3?1:n<=5?2:n<=7?3:n<=10?4:(n-11)%5;
 const battleName=n=>n<=10?BNAMES[n-1]:'Défi n°'+(n-10);
@@ -1319,7 +1374,7 @@ function init(){
   const away=(Date.now()-S.lastSeen)/1000;
   if(away>120){const m=Math.min(away,8*3600);S.crea.forEach(c=>{c.hunger=Math.max(35,c.hunger-m*.1);c.energy=clamp(c.energy+m*.02,0,100);c.social=Math.max(30,c.social-m*.06)});
     const rd=S.eggs.filter(e=>e.ready<=Date.now()).length;setTimeout(()=>toast(`Bon retour ! ${rd?`${rd} œuf${rd>1?'s sont prêts':' est prêt'} à éclore.`:'Tes créatures t\'attendaient.'}${calClaimable()?' 🎁 Ta récompense du jour t\'attend.':''}`),600)}
-  renderChips();vResize();updRes();tick();setInterval(tick,1000);setInterval(save,10000);
+  renderChips();vResize();updRes();updGM();tick();setInterval(tick,1000);setInterval(save,10000);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});window.addEventListener('pagehide',save);
   window.addEventListener('resize',()=>{if(cur==='viv')vResize();if(B)bResize()});
   setTimeout(hideHint,9000);
