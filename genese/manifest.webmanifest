@@ -1,0 +1,14 @@
+{
+  "name": "Genèse",
+  "short_name": "Genèse",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0b16",
+  "theme_color": "#0d0b16",
+  "icons": [
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
