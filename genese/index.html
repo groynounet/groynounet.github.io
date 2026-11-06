@@ -20,7 +20,7 @@ input{font:inherit}
 .hidden{display:none!important}
 #app{position:fixed;inset:0;display:flex;flex-direction:column}
 header{padding:calc(var(--st) + 7px) 12px 7px;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg);z-index:5;border-bottom:1px solid #1c1830}
-.logo{font-weight:900;letter-spacing:.18em;font-size:17px;background:linear-gradient(90deg,#ffb347,#b48cff,#8fdcff);-webkit-background-clip:text;background-clip:text;color:transparent;flex:none}
+.logo{cursor:pointer;touch-action:manipulation;font-weight:900;letter-spacing:.18em;font-size:17px;background:linear-gradient(90deg,#ffb347,#b48cff,#8fdcff);-webkit-background-clip:text;background-clip:text;color:transparent;flex:none}
 .hdr{display:flex;gap:6px;align-items:center;min-width:0}
 .pill{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:5px 10px;font-size:13px;white-space:nowrap}
 .cur{display:flex;gap:9px}
@@ -1185,14 +1185,14 @@ function openProfile(){const L=S.acc.lvl;
    <h4>Fonctions à débloquer</h4><ul class="ul">${UNL.map(u=>`<li><span>${L>=u.l?'✅':'🔒'} ${u.n}</span><span class="mut">Niveau ${u.l}</span></li>`).join('')}</ul>
    <h4>Monnaies</h4><ul class="ul"><li><span>◆ Essence</span><span class="mut">tirages, accouplements</span></li><li><span>● Or</span><span class="mut">graines, mines, forge</span></li><li><span>♦ Cristaux</span><span class="mut">accélérer, œufs ancestraux, couveuse</span></li></ul>
    <h4>Statistiques</h4><ul class="ul"><li><span>Créatures</span><b>${S.crea.length}</b></li><li><span>Espèces découvertes</span><b>${Object.keys(S.best).length} / ${TOTAL_SP}</b></li><li><span>Batailles remportées</span><b>${S.st.win||0}</b></li><li><span>Récoltes</span><b>${S.st.harvest||0}</b></li><li><span>Or extrait</span><b>${fmtN(S.st.goldmine||0)}</b></li></ul>
-   <button class="btn red sm" id="pReset" style="margin-top:12px">Recommencer une partie</button>`);
+   <p class="mut sm">Version 3</p><button class="btn red sm" id="pReset" style="margin-top:12px">Recommencer une partie</button>`);
   $('#pReset').onclick=()=>{if(confirm('Effacer toute ta progression ?')&&confirm('Vraiment ? Cette action est définitive.')){localStorage.removeItem(KEY);location.reload()}}}
 $('#hCal').onclick=openCal;$('#hQ').onclick=()=>openQuests('q');$('#hAcc').onclick=openProfile;$('#hCur').onclick=openProfile;
 
 
 /* --- Mode maître du jeu --- */
 let gmTaps=0,gmTimer=null;
-$('.logo').addEventListener('click',()=>{gmTaps++;clearTimeout(gmTimer);gmTimer=setTimeout(()=>gmTaps=0,1500);if(gmTaps>=5){gmTaps=0;S.gm=!S.gm;save();updGM();toast(S.gm?'🛠️ Mode maître du jeu activé':'Mode maître du jeu désactivé');if(S.gm)openGM()}});
+$('.logo').addEventListener('pointerup',()=>{gmTaps++;clearTimeout(gmTimer);gmTimer=setTimeout(()=>gmTaps=0,2500);if(gmTaps>=5){gmTaps=0;S.gm=!S.gm;save();updGM();toast(S.gm?'🛠️ Mode maître du jeu activé':'Mode maître du jeu désactivé');if(S.gm)openGM()}});
 function updGM(){$('#hGM').classList.toggle('hidden',!S.gm)}
 $('#hGM').onclick=()=>openGM();
 function gmDone(msg){updRes();save();renderChips();vResize();refresh();toast('🛠️ '+msg)}
@@ -1374,6 +1374,7 @@ function init(){
   const away=(Date.now()-S.lastSeen)/1000;
   if(away>120){const m=Math.min(away,8*3600);S.crea.forEach(c=>{c.hunger=Math.max(35,c.hunger-m*.1);c.energy=clamp(c.energy+m*.02,0,100);c.social=Math.max(30,c.social-m*.06)});
     const rd=S.eggs.filter(e=>e.ready<=Date.now()).length;setTimeout(()=>toast(`Bon retour ! ${rd?`${rd} œuf${rd>1?'s sont prêts':' est prêt'} à éclore.`:'Tes créatures t\'attendaient.'}${calClaimable()?' 🎁 Ta récompense du jour t\'attend.':''}`),600)}
+  if(/[?#&]mj\b/.test(location.href)){S.gm=true;save();setTimeout(()=>{toast('🛠️ Mode maître du jeu activé');openGM()},800)}
   renderChips();vResize();updRes();updGM();tick();setInterval(tick,1000);setInterval(save,10000);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});window.addEventListener('pagehide',save);
   window.addEventListener('resize',()=>{if(cur==='viv')vResize();if(B)bResize()});
