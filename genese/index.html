@@ -1192,7 +1192,7 @@ $('#hCal').onclick=openCal;$('#hQ').onclick=()=>openQuests('q');$('#hAcc').oncli
 
 /* --- Mode maître du jeu --- */
 let gmTaps=0,gmTimer=null;
-$('.logo').addEventListener('pointerup',()=>{gmTaps++;clearTimeout(gmTimer);gmTimer=setTimeout(()=>gmTaps=0,2500);if(gmTaps>=5){gmTaps=0;S.gm=!S.gm;save();updGM();toast(S.gm?'🛠️ Mode maître du jeu activé':'Mode maître du jeu désactivé');if(S.gm)openGM()}});
+$('.logo').addEventListener('pointerup',()=>{gmTaps++;clearTimeout(gmTimer);gmTimer=setTimeout(()=>gmTaps=0,2500);if(gmTaps>=5){gmTaps=0;S.gm=!S.gm;save();updGM();toast(S.gm?'🛠️ Mode maître du jeu activé':'Mode maître du jeu désactivé');if(S.gm)setTimeout(openGM,400)}});
 function updGM(){$('#hGM').classList.toggle('hidden',!S.gm)}
 $('#hGM').onclick=()=>openGM();
 function gmDone(msg){updRes();save();renderChips();vResize();refresh();toast('🛠️ '+msg)}
