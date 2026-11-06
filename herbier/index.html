@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Herbier</title>
+<meta name="theme-color" content="#f4efe4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141a15" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Herbier">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{
+  --bg:#f4efe4; --paper:#fbf8f1; --ink:#22291f; --ink2:#5d6656; --line:#ddd5c4;
+  --green:#2f5a3a; --green2:#e3ebdc; --terra:#b25a35; --warn:#9a3b22; --warnbg:#f6e2d8;
+  --shadow:0 1px 2px rgba(40,35,20,.06),0 4px 14px rgba(40,35,20,.06);
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#141a15;--paper:#1c241d;--ink:#e9eadf;--ink2:#a7ae9c;--line:#2f3a30;
+  --green:#8fc39a;--green2:#24352a;--terra:#e08a62;--warn:#f0a080;--warnbg:#3a241c;
+  --shadow:0 1px 2px rgba(0,0,0,.3);}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.45}
+body{min-height:100vh;padding-top:var(--safe-t)}
+main{max-width:640px;margin:0 auto;padding:16px 16px calc(96px + var(--safe-b))}
+h1,h2,h3{font-family:var(--serif);font-weight:600;letter-spacing:.005em;margin:0}
+h1{font-size:30px;line-height:1.15}
+h2{font-size:22px}
+h3{font-size:18px}
+.sub{color:var(--ink2);font-size:14px}
+.sci{font-family:var(--serif);font-style:italic}
+header.top{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 16px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
+.btn{appearance:none;border:0;border-radius:12px;padding:13px 18px;font:600 16px var(--sans);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px}
+.btn.primary{background:var(--green);color:var(--paper)}
+.btn.soft{background:var(--green2);color:var(--green)}
+.btn.ghost{background:transparent;color:var(--green);border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--warn);border:1px solid var(--line)}
+.btn.block{width:100%}
+.btn:disabled{opacity:.5}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>.btn{flex:1 1 140px}
+label.f{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin:12px 0 6px}
+input[type=text],input[type=search],input[type=password],textarea{width:100%;font:16px var(--sans);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+textarea{min-height:80px;resize:vertical}
+input:focus,textarea:focus{outline:2px solid var(--green);outline-offset:1px}
+.hidden{display:none!important}
+a{color:var(--green)}
+.note{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:14px;margin:10px 0}
+.muted{background:var(--green2);color:var(--ink);border-radius:10px;padding:10px 12px;font-size:14px;margin:10px 0}
+
+/* Picker */
+.drop{border:1.5px dashed var(--line);border-radius:14px;padding:22px 16px;text-align:center;background:var(--paper)}
+.drop svg{width:42px;height:42px;color:var(--green)}
+.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin-top:12px}
+.shot{position:relative;border-radius:12px;overflow:hidden;background:var(--line);aspect-ratio:1}
+.shot img{width:100%;height:100%;object-fit:cover;display:block}
+.shot .x{position:absolute;top:5px;right:5px;width:28px;height:28px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:17px;line-height:28px;padding:0}
+.shot .organ{position:absolute;left:5px;right:5px;bottom:5px;border:0;border-radius:8px;background:rgba(251,248,241,.92);color:#22291f;font:600 12px var(--sans);padding:6px 4px}
+.hint{font-size:13px;color:var(--ink2);margin-top:8px}
+
+/* Results */
+.res{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--paper);border-radius:14px;padding:14px;margin-bottom:10px;color:var(--ink);font:inherit;box-shadow:var(--shadow)}
+.res.open{border-color:var(--green)}
+.res-head{display:flex;gap:12px;align-items:center}
+.res-head .pct{font:700 15px var(--sans);color:var(--green);min-width:46px;text-align:right}
+.res-head .names{flex:1;min-width:0}
+.res-head .names b{display:block;font-family:var(--serif);font-size:18px;font-weight:600;overflow-wrap:anywhere}
+.bar{height:5px;border-radius:3px;background:var(--line);margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--green);border-radius:3px}
+.refs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}
+.refs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:var(--line);display:block}
+.credit{font-size:11px;color:var(--ink2);margin-top:6px;overflow-wrap:anywhere}
+.wiki{font-size:15px;margin-top:12px}
+.spin{width:22px;height:22px;border:3px solid var(--green2);border-top-color:var(--green);border-radius:50%;animation:s .8s linear infinite;display:inline-block;vertical-align:middle}
+@keyframes s{to{transform:rotate(360deg)}}
+.conf{display:inline-block;font-size:12px;font-weight:600;padding:3px 8px;border-radius:20px;background:var(--green2);color:var(--green)}
+.conf.low{background:var(--warnbg);color:var(--warn)}
+
+/* Garden list */
+.list{display:grid;gap:10px}
+.item{display:flex;gap:12px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:10px;width:100%;text-align:left;color:var(--ink);font:inherit;box-shadow:var(--shadow)}
+.item img,.item .ph{width:64px;height:64px;border-radius:10px;object-fit:cover;flex:none;background:var(--green2)}
+.item .ph{display:flex;align-items:center;justify-content:center;color:var(--green);font-family:var(--serif);font-size:26px}
+.item .t{flex:1;min-width:0}
+.item .t b{display:block;font-family:var(--serif);font-size:17px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .t span{display:block;font-size:13px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty{text-align:center;padding:36px 12px;color:var(--ink2)}
+.empty svg{width:56px;height:56px;color:var(--green);opacity:.7}
+.count{font-size:14px;color:var(--ink2)}
+
+/* Detail */
+.back{background:none;border:0;color:var(--green);font:600 16px var(--sans);padding:8px 0;margin-bottom:6px}
+.gallery{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -16px 14px;padding:0 16px}
+.gallery img{height:240px;max-width:85vw;border-radius:14px;object-fit:cover;scroll-snap-align:start;flex:none;background:var(--line)}
+.meta{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;margin-top:10px}
+.meta dt{color:var(--ink2)}
+.meta dd{margin:0;overflow-wrap:anywhere}
+.log{list-style:none;padding:0;margin:10px 0 0}
+.log li{border-left:3px solid var(--green2);padding:4px 0 6px 12px;margin-bottom:6px}
+.log li small{display:block;color:var(--ink2);font-size:12px}
+.log li .del{float:right;background:none;border:0;color:var(--ink2);font-size:18px;padding:0 4px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:20px;padding:7px 12px;font:14px var(--sans)}
+
+/* Tabs */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--paper);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 8px calc(6px + var(--safe-b));z-index:10}
+nav.tabs button{flex:1;max-width:160px;background:none;border:0;color:var(--ink2);font:600 11px var(--sans);display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0}
+nav.tabs button svg{width:25px;height:25px}
+nav.tabs button.on{color:var(--green)}
+
+.toast{position:fixed;left:50%;bottom:calc(84px + var(--safe-b));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:12px;font-size:14px;z-index:20;max-width:90vw;text-align:center;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<main id="app"></main>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="identify" class="on">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+    Identifier
+  </button>
+  <button data-tab="garden">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V11"/><path d="M12 11C12 6 8 4 4 4c0 5 3 7 8 7z"/><path d="M12 14c0-4 3-6 8-6 0 4-3 6-8 6z"/></svg>
+    Mon jardin
+  </button>
+  <button data-tab="settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    Réglages
+  </button>
+</nav>
+<div class="toast" id="toast"></div>
+<input type="file" id="filePick" accept="image/*" multiple class="hidden">
+<input type="file" id="filePickOne" accept="image/*" class="hidden">
+<input type="file" id="importPick" accept="application/json,.json" class="hidden">
+
+<script>
+"use strict";
+/* ================== Constantes ================== */
+const API = "https://my-api.plantnet.org/v2/identify/all";
+const MAX_SHOTS = 5;
+const ORGANS = [["auto","Auto"],["flower","Fleur"],["leaf","Feuille"],["fruit","Fruit"],["bark","Écorce"]];
+const ORGAN_LABEL = Object.fromEntries(ORGANS);
+const LS_KEY = "herbier.apikey", LS_QUOTA = "herbier.quota";
+
+/* ================== Utilitaires ================== */
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+const fmtDate = t => new Date(t).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+const pct = s => Math.round(s*100) + " %";
+function lsGet(k){ try{ return localStorage.getItem(k) || ""; }catch(e){ return ""; } }
+function lsSet(k,v){ try{ v ? localStorage.setItem(k,v) : localStorage.removeItem(k); }catch(e){} }
+let toastT;
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600); }
+const ICON_LEAF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V11"/><path d="M12 11C12 6 8 4 4 4c0 5 3 7 8 7z"/><path d="M12 14c0-4 3-6 8-6 0 4-3 6-8 6z"/></svg>';
+const ICON_CAM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+
+/* URL d'objets créées pour l'écran courant, libérées au changement d'écran */
+let liveURLs = [];
+function objURL(blob){ const u = URL.createObjectURL(blob); liveURLs.push(u); return u; }
+function freeURLs(keep=[]){ liveURLs.forEach(u => { if(!keep.includes(u)) URL.revokeObjectURL(u); }); liveURLs = liveURLs.filter(u => keep.includes(u)); }
+
+/* ================== Stockage (IndexedDB) ================== */
+const DB = (() => {
+  let dbp;
+  function open(){
+    if (dbp) return dbp;
+    dbp = new Promise((res, rej) => {
+      const r = indexedDB.open("herbier", 1);
+      r.onupgradeneeded = () => {
+        const d = r.result;
+        if (!d.objectStoreNames.contains("plants")) d.createObjectStore("plants", {keyPath:"id"});
+        if (!d.objectStoreNames.contains("photos")) d.createObjectStore("photos", {keyPath:"id"});
+      };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+    return dbp;
+  }
+  async function tx(stores, mode, fn){
+    const d = await open();
+    return new Promise((res, rej) => {
+      const t = d.transaction(stores, mode);
+      let out;
+      Promise.resolve(fn(...[].concat(stores).map(s => t.objectStore(s)))).then(v => out = v);
+      t.oncomplete = () => res(out);
+      t.onerror = () => rej(t.error);
+      t.onabort = () => rej(t.error || new Error("Transaction annulée"));
+    });
+  }
+  const req = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  return {
+    allPlants: () => tx("plants","readonly", s => req(s.getAll())),
+    getPlant: id => tx("plants","readonly", s => req(s.get(id))),
+    putPlant: p => tx("plants","readwrite", s => { s.put(p); }),
+    async savePlantWithPhotos(p, photos){ // photos : [{id, blob}]
+      const bufs = await Promise.all(photos.map(async ph => ({id:ph.id, type:ph.blob.type || "image/jpeg", buf: await ph.blob.arrayBuffer()})));
+      return tx(["plants","photos"],"readwrite",(ps, phs) => { bufs.forEach(b => phs.put(b)); ps.put(p); });
+    },
+    async getPhoto(id){
+      const r = await tx("photos","readonly", s => req(s.get(id)));
+      return r ? new Blob([r.buf], {type:r.type}) : null;
+    },
+    getPhotoRaw: id => tx("photos","readonly", s => req(s.get(id))),
+    deletePlant: p => tx(["plants","photos"],"readwrite",(ps, phs) => { (p.photoIds||[]).forEach(i => phs.delete(i)); ps.delete(p.id); }),
+    deletePhoto: id => tx("photos","readwrite", s => { s.delete(id); })
+  };
+})();
+
+/* ================== Images ================== */
+async function decode(file){
+  if (window.createImageBitmap) {
+    try { return await createImageBitmap(file); } catch(e) { /* repli ci-dessous */ }
+  }
+  return new Promise((res, rej) => {
+    const img = new Image(); const u = URL.createObjectURL(file);
+    img.onload = () => { URL.revokeObjectURL(u); res(img); };
+    img.onerror = () => { URL.revokeObjectURL(u); rej(new Error("Image illisible")); };
+    img.src = u;
+  });
+}
+/* Redimensionne pour que le plus petit côté fasse au plus `minSide` px */
+function draw(src, minSide, quality){
+  const w = src.width, h = src.height;
+  const k = Math.min(1, minSide / Math.min(w, h));
+  const c = document.createElement("canvas");
+  c.width = Math.round(w*k); c.height = Math.round(h*k);
+  c.getContext("2d").drawImage(src, 0, 0, c.width, c.height);
+  return new Promise(res => c.toBlob(b => res(b), "image/jpeg", quality));
+}
+async function prepare(file){
+  const src = await decode(file);
+  const full = await draw(src, 1280, 0.9);   // taille recommandée par Pl@ntNet
+  const thumb = await draw(src, 200, 0.8);
+  if (src.close) src.close();
+  const small = Math.min(src.width, src.height) < 800;
+  return { full, thumb, small };
+}
+const blobToDataURL = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(b); });
+
+/* ================== Services externes ================== */
+async function identify(shots, key){
+  const fd = new FormData();
+  shots.forEach((s, i) => { fd.append("images", s.full, `photo${i+1}.jpg`); fd.append("organs", s.organ); });
+  const url = `${API}?api-key=${encodeURIComponent(key)}&lang=fr&include-related-images=true&nb-results=5`;
+  let r;
+  try { r = await fetch(url, {method:"POST", body:fd}); }
+  catch(e){ throw new Error("Pas de connexion, ou Pl@ntNet refuse cette adresse. Vérifie Internet et, dans ton compte Pl@ntNet, que le domaine de l'app est autorisé (voir Réglages)."); }
+  let data = null; try { data = await r.json(); } catch(e) {}
+  if (!r.ok) {
+    if (r.status === 404) throw new Error("Aucune plante reconnue. Essaie une photo plus nette, bien cadrée sur une fleur, un fruit ou une feuille.");
+    if (r.status === 401 || r.status === 403) throw new Error("Clé Pl@ntNet refusée. Vérifie la clé dans Réglages et que le domaine de l'app est autorisé dans ton compte Pl@ntNet.");
+    if (r.status === 429) throw new Error("Quota du jour atteint (500 identifications). Il se renouvelle à minuit UTC (1 h du matin à Paris en hiver, 2 h en été).");
+    if (r.status === 413) throw new Error("Photos trop lourdes. Retire-en une et réessaie.");
+    throw new Error(`Pl@ntNet a répondu une erreur (${r.status}). ${data && data.message ? data.message : "Réessaie dans un instant."}`);
+  }
+  if (data && typeof data.remainingIdentificationRequests === "number") lsSet(LS_QUOTA, JSON.stringify({n:data.remainingIdentificationRequests, t:Date.now()}));
+  return (data && data.results) || [];
+}
+const wikiCache = new Map();
+async function wiki(sciName){
+  if (wikiCache.has(sciName)) return wikiCache.get(sciName);
+  const p = (async () => {
+    const title = encodeURIComponent(sciName.trim().replace(/ /g, "_"));
+    const r = await fetch(`https://fr.wikipedia.org/api/rest_v1/page/summary/${title}?redirect=true`);
+    if (!r.ok) return null;
+    const d = await r.json();
+    if (!d || d.type === "disambiguation" || !d.extract) return null;
+    return { title:d.title, extract:d.extract, url:(d.content_urls && d.content_urls.mobile && d.content_urls.mobile.page) || `https://fr.m.wikipedia.org/wiki/${title}` };
+  })().catch(() => null);
+  wikiCache.set(sciName, p);
+  const v = await p; if (v === null) wikiCache.delete(sciName); // on retentera plus tard
+  return v;
+}
+function speciesInfo(res){
+  const sp = res.species || {};
+  return {
+    sci: sp.scientificNameWithoutAuthor || sp.scientificName || "Espèce inconnue",
+    author: sp.scientificNameAuthorship || "",
+    common: (sp.commonNames || []).filter(Boolean),
+    family: (sp.family && (sp.family.scientificNameWithoutAuthor || sp.family.scientificName)) || "",
+    genus: (sp.genus && (sp.genus.scientificNameWithoutAuthor || sp.genus.scientificName)) || "",
+    gbif: res.gbif && res.gbif.id ? String(res.gbif.id) : "",
+    score: typeof res.score === "number" ? res.score : 0,
+    images: (res.images || []).filter(im => im && im.url && (im.url.s || im.url.m)).slice(0,4)
+  };
+}
+const careSearch = sci => `https://www.google.com/search?q=${encodeURIComponent("entretien " + sci + " jardin")}`;
+const capitalize = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+
+/* ================== État ================== */
+const state = {
+  tab: "identify",
+  shots: [],          // {id, full, thumb, organ, small, url}
+  busy: false,
+  results: null,      // tableau speciesInfo
+  error: "",
+  openIdx: -1,
+  plantId: null,      // fiche ouverte dans Mon jardin
+  query: ""
+};
+
+/* ================== Navigation ================== */
+function go(tab){
+  state.tab = tab; state.plantId = null;
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
+  render(); window.scrollTo(0,0);
+}
+$("#tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) go(b.dataset.tab); });
+
+function render(){
+  const keep = state.tab === "identify" ? state.shots.map(s => s.url) : [];
+  freeURLs(keep);
+  if (state.tab === "identify") renderIdentify();
+  else if (state.tab === "garden") state.plantId ? renderPlant(state.plantId) : renderGarden();
+  else renderSettings();
+}
+
+/* ================== Écran Identifier ================== */
+function renderIdentify(){
+  const key = lsGet(LS_KEY);
+  const app = $("#app");
+  let h = `<header class="top"><h1>Identifier</h1></header>`;
+  if (!key) {
+    h += `<div class="card"><h3>Une étape avant de commencer</h3>
+      <p class="sub">L'identification passe par Pl@ntNet, gratuit jusqu'à 500 photos par jour. Il te faut ta clé personnelle, à coller une seule fois dans les réglages.</p>
+      <button class="btn primary block" data-act="to-settings">Ajouter ma clé Pl@ntNet</button></div>`;
+  }
+  if (!state.shots.length) {
+    h += `<div class="drop">${ICON_CAM}
+      <p style="margin:8px 0 14px"><b>Photographie la plante</b><br><span class="sub">Une fleur ou un fruit donne les meilleurs résultats. Jusqu'à ${MAX_SHOTS} photos de la même plante.</span></p>
+      <button class="btn primary" data-act="pick">Prendre ou choisir une photo</button></div>`;
+  } else {
+    h += `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center">
+        <h3>${state.shots.length} photo${state.shots.length>1?"s":""}</h3>
+        ${state.shots.length < MAX_SHOTS ? `<button class="btn ghost" style="min-height:38px;padding:8px 12px" data-act="pick">+ Ajouter</button>` : ""}
+      </div>
+      <div class="shots">${state.shots.map(s => `
+        <div class="shot"><img src="${s.url}" alt="">
+          <button class="x" data-act="rm-shot" data-id="${s.id}" aria-label="Retirer">×</button>
+          <button class="organ" data-act="organ" data-id="${s.id}">${ORGAN_LABEL[s.organ]} ▾</button></div>`).join("")}
+      </div>
+      <p class="hint">Touche l'étiquette pour préciser ce que montre chaque photo, ou laisse « Auto ».</p>
+      ${state.shots.some(s => s.small) ? `<div class="note">Une photo est petite (moins de 800 pixels) : le résultat risque d'être moins fiable.</div>` : ""}
+      <div class="row" style="margin-top:12px">
+        <button class="btn primary" data-act="identify" ${state.busy || !key ? "disabled" : ""}>${state.busy ? '<span class="spin" style="border-color:rgba(255,255,255,.3);border-top-color:#fff"></span> Analyse…' : "Identifier"}</button>
+        <button class="btn ghost" data-act="reset" ${state.busy ? "disabled" : ""}>Recommencer</button>
+      </div></div>`;
+  }
+  if (state.error) h += `<div class="note">${esc(state.error)}</div>`;
+  if (state.results) {
+    const top = state.results[0];
+    h += `<h2 style="margin:20px 0 4px">Résultats</h2>`;
+    if (top && top.score < 0.2) h += `<div class="muted">Pl@ntNet hésite : aucune proposition ne dépasse 20 %. Ajoute une photo d'une fleur ou d'un fruit pour affiner.</div>`;
+    h += `<p class="sub" style="margin:0 0 10px">Touche une proposition pour la comparer et l'ajouter à ton jardin.</p>`;
+    h += state.results.map((r, i) => resultCard(r, i)).join("");
+    h += `<button class="btn ghost block" data-act="save-unknown" style="margin-top:4px">Aucune ne correspond : garder sans nom</button>`;
+    h += `<p class="credit" style="margin-top:14px">Identification : Pl@ntNet (application non officielle). Descriptions : Wikipédia.</p>`;
+  }
+  app.innerHTML = h;
+  if (state.openIdx >= 0 && state.results) loadWikiInto(state.results[state.openIdx], state.openIdx);
+}
+function resultCard(r, i){
+  const open = i === state.openIdx;
+  const name = r.common[0] ? capitalize(r.common[0]) : r.sci;
+  let h = `<div class="res ${open ? "open" : ""}">
+    <div class="res-head" data-act="open-res" data-i="${i}" role="button" tabindex="0">
+      <div class="names"><b>${esc(name)}</b>
+        <span class="sub">${r.common[0] ? `<span class="sci">${esc(r.sci)}</span> · ` : ""}${esc(r.family)}</span></div>
+      <div class="pct">${pct(r.score)}</div></div>
+    <div class="bar"><i style="width:${Math.max(2, Math.round(r.score*100))}%"></i></div>`;
+  if (open) {
+    if (r.images.length) {
+      h += `<div class="refs">${r.images.map(im => `<img loading="lazy" src="${esc(im.url.s || im.url.m)}" alt="" title="${esc(im.citation || "")}">`).join("")}</div>
+        <p class="credit">Photos de référence Pl@ntNet : ${esc([...new Set(r.images.map(im => im.author).filter(Boolean))].join(", ") || "contributeurs")} (${esc([...new Set(r.images.map(im => im.license).filter(Boolean))].join(", ") || "licences libres")})</p>`;
+    }
+    if (r.common.length > 1) h += `<p class="sub" style="margin:10px 0 0">Aussi appelée : ${esc(r.common.slice(1,4).join(", "))}</p>`;
+    h += `<div class="wiki" id="wiki-${i}"><span class="spin"></span> <span class="sub">Recherche de la description…</span></div>
+      <label class="f" for="loc-${i}">Emplacement dans le jardin (facultatif)</label>
+      <input type="text" id="loc-${i}" placeholder="Ex. massif devant la terrasse">
+      <button class="btn primary block" style="margin-top:12px" data-act="save" data-i="${i}">Ajouter à mon jardin</button>`;
+  }
+  return h + `</div>`;
+}
+async function loadWikiInto(r, i){
+  const el = $(`#wiki-${i}`); if (!el) return;
+  const w = await wiki(r.sci);
+  const el2 = $(`#wiki-${i}`); if (!el2) return;
+  el2.innerHTML = w
+    ? `<p style="margin:0">${esc(w.extract)}</p><p class="sub" style="margin:6px 0 0"><a href="${esc(w.url)}" target="_blank" rel="noopener">Lire sur Wikipédia</a> · <a href="${careSearch(r.sci)}" target="_blank" rel="noopener">Conseils d'entretien</a></p>`
+    : `<p class="sub" style="margin:0">Pas de fiche Wikipédia en français pour cette espèce. <a href="${careSearch(r.sci)}" target="_blank" rel="noopener">Chercher des conseils d'entretien</a></p>`;
+}
+
+async function addFiles(files){
+  const list = [...files].slice(0, MAX_SHOTS - state.shots.length);
+  if (files.length > list.length) toast(`${MAX_SHOTS} photos au maximum`);
+  for (const f of list) {
+    try {
+      const p = await prepare(f);
+      state.shots.push({ id:uid(), full:p.full, thumb:p.thumb, small:p.small, organ:"auto", url:URL.createObjectURL(p.full) });
+      liveURLs.push(state.shots[state.shots.length-1].url);
+    } catch(e) { toast("Impossible de lire cette image"); }
+  }
+  state.results = null; state.error = ""; state.openIdx = -1;
+  render();
+}
+async function runIdentify(){
+  const key = lsGet(LS_KEY);
+  if (!key || !state.shots.length || state.busy) return;
+  state.busy = true; state.error = ""; state.results = null; state.openIdx = -1; render();
+  try {
+    const res = await identify(state.shots, key);
+    state.results = res.map(speciesInfo).filter(r => r.sci);
+    if (!state.results.length) state.error = "Aucune plante reconnue. Essaie une photo plus nette.";
+    else state.openIdx = 0;
+  } catch(e) { state.error = e.message; }
+  state.busy = false; render();
+  if (state.results) { const h = $("h2"); if (h) h.scrollIntoView({behavior:"smooth", block:"start"}); }
+}
+async function saveFromResult(i){
+  const r = i === null ? null : state.results[i];
+  const loc = i === null ? "" : (($(`#loc-${i}`) || {}).value || "").trim();
+  const photos = state.shots.map(s => ({ id:uid(), blob:s.full }));
+  const thumb = state.shots[0] ? await blobToDataURL(state.shots[0].thumb) : "";
+  const w = r ? await wiki(r.sci) : null;
+  const plant = {
+    id: uid(), created: Date.now(),
+    sci: r ? r.sci : "", author: r ? r.author : "", common: r ? r.common.slice(0,5) : [],
+    family: r ? r.family : "", genus: r ? r.genus : "", gbif: r ? r.gbif : "",
+    score: r ? r.score : null, location: loc, notes: "", log: [],
+    alternatives: r ? [] : state.results.slice(0,3).map(x => ({sci:x.sci, common:x.common[0]||"", score:x.score})),
+    wiki: w, photoIds: photos.map(p => p.id), thumb
+  };
+  try {
+    await DB.savePlantWithPhotos(plant, photos);
+    try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e) {}
+    toast("Ajoutée à ton jardin");
+    state.shots.forEach(s => URL.revokeObjectURL(s.url));
+    state.shots = []; state.results = null; state.openIdx = -1; state.error = "";
+    state.tab = "garden"; state.plantId = plant.id;
+    document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === "garden"));
+    render(); window.scrollTo(0,0);
+  } catch(e) { toast("Enregistrement impossible : stockage plein ?"); }
+}
+
+/* ================== Écran Mon jardin ================== */
+const displayName = p => p.common && p.common[0] ? capitalize(p.common[0]) : (p.sci || "Plante sans nom");
+async function renderGarden(){
+  const plants = (await DB.allPlants()).sort((a,b) => b.created - a.created);
+  if (state.tab !== "garden" || state.plantId) return;
+  const q = state.query.trim().toLowerCase();
+  const norm = s => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+  const shown = q ? plants.filter(p => norm([displayName(p), p.sci, p.family, p.location, p.notes, ...(p.common||[])].join(" ")).includes(norm(q))) : plants;
+  let h = `<header class="top"><h1>Mon jardin</h1><span class="count">${plants.length} plante${plants.length>1?"s":""}</span></header>`;
+  if (!plants.length) {
+    h += `<div class="empty">${ICON_LEAF}<p><b>Ton jardin est encore vide</b><br>Identifie une plante et ajoute-la : elle apparaîtra ici avec ses photos.</p>
+      <button class="btn primary" data-act="to-identify">Identifier une plante</button></div>`;
+  } else {
+    h += `<input type="search" id="q" placeholder="Rechercher un nom, un emplacement…" value="${esc(state.query)}" style="margin-bottom:12px">`;
+    h += shown.length ? `<div class="list">${shown.map(p => `
+      <button class="item" data-act="open-plant" data-id="${p.id}">
+        ${p.thumb ? `<img src="${p.thumb}" alt="">` : `<span class="ph">${esc(displayName(p).charAt(0))}</span>`}
+        <span class="t"><b>${esc(displayName(p))}</b>
+          <span>${p.sci && p.common && p.common[0] ? `<i class="sci">${esc(p.sci)}</i>` : esc(p.family || "À identifier")}</span>
+          <span>${esc(p.location || fmtDate(p.created))}</span></span>
+      </button>`).join("")}</div>` : `<p class="sub">Aucune plante ne correspond.</p>`;
+  }
+  $("#app").innerHTML = h;
+  const qi = $("#q");
+  if (qi) qi.addEventListener("input", () => { state.query = qi.value; const pos = qi.selectionStart; renderGarden().then(() => { const n = $("#q"); if (n) { n.focus(); n.setSelectionRange(pos,pos); } }); });
+}
+
+async function renderPlant(id){
+  const p = await DB.getPlant(id);
+  if (!p) { state.plantId = null; return renderGarden(); }
+  const blobs = await Promise.all((p.photoIds||[]).map(i => DB.getPhoto(i)));
+  if (state.plantId !== id) return;
+  freeURLs();
+  const urls = blobs.map(b => b ? objURL(b) : null);
+  let h = `<button class="back" data-act="back">‹ Mon jardin</button>`;
+  if (urls.some(Boolean)) h += `<div class="gallery">${urls.map((u, k) => u ? `<img src="${u}" alt="">` : "").join("")}</div>`;
+  h += `<div class="card">
+    <h1 style="font-size:26px">${esc(displayName(p))}</h1>
+    ${p.sci ? `<p class="sci" style="margin:4px 0 0;color:var(--ink2)">${esc(p.sci)} ${esc(p.author)}</p>` : ""}
+    ${p.score != null ? `<p style="margin:8px 0 0"><span class="conf ${p.score < 0.5 ? "low" : ""}">Confiance Pl@ntNet : ${pct(p.score)}</span></p>` : ""}
+    <dl class="meta">
+      ${p.family ? `<dt>Famille</dt><dd class="sci">${esc(p.family)}</dd>` : ""}
+      ${p.common && p.common.length > 1 ? `<dt>Autres noms</dt><dd>${esc(p.common.slice(1).join(", "))}</dd>` : ""}
+      <dt>Ajoutée le</dt><dd>${fmtDate(p.created)}</dd>
+    </dl>
+    ${!p.sci && p.alternatives && p.alternatives.length ? `<div class="muted">Pistes proposées : ${p.alternatives.map(a => `${esc(a.common ? capitalize(a.common) : a.sci)} (${pct(a.score)})`).join(", ")}</div>` : ""}
+  </div>`;
+  if (p.sci) {
+    h += `<div class="card"><h3>Description</h3><div class="wiki" id="pwiki">${p.wiki
+      ? `<p style="margin:0">${esc(p.wiki.extract)}</p><p class="sub" style="margin:6px 0 0"><a href="${esc(p.wiki.url)}" target="_blank" rel="noopener">Lire sur Wikipédia</a></p>`
+      : `<span class="spin"></span>`}</div>
+      <p style="margin:12px 0 0"><a class="btn soft block" href="${careSearch(p.sci)}" target="_blank" rel="noopener">Chercher des conseils d'entretien</a></p></div>`;
+  }
+  h += `<div class="card"><h3>Emplacement et notes</h3>
+    <label class="f" for="ploc">Emplacement</label>
+    <input type="text" id="ploc" value="${esc(p.location)}" placeholder="Ex. haie du fond, côté nord">
+    <label class="f" for="pnotes">Notes</label>
+    <textarea id="pnotes" placeholder="Origine, variété, besoins particuliers…">${esc(p.notes)}</textarea>
+    <p class="sub" id="saved" style="margin:6px 0 0;min-height:1.4em"></p></div>`;
+  h += `<div class="card"><h3>Journal</h3>
+    <div class="chips">${["Plantée","Arrosée","Taillée","Fertilisée","En fleurs","Fruits","Malade","Traitée"].map(c => `<button class="chip" data-act="log-chip" data-v="${c}">${c}</button>`).join("")}</div>
+    <div style="display:flex;gap:8px;margin-top:10px"><input type="text" id="logtxt" placeholder="Ou écris une observation"><button class="btn primary" data-act="log-add" style="flex:none">Ajouter</button></div>
+    <ul class="log">${(p.log||[]).slice().sort((a,b) => b.t - a.t).map(e => `<li><button class="del" data-act="log-del" data-t="${e.t}" aria-label="Supprimer">×</button>${esc(e.text)}<small>${fmtDate(e.t)}</small></li>`).join("") || `<li class="sub" style="border:0;padding-left:0">Rien de noté pour l'instant.</li>`}</ul></div>`;
+  h += `<div class="row" style="margin-top:4px">
+    <button class="btn ghost" data-act="add-photo">Ajouter une photo</button>
+    <button class="btn danger" data-act="delete">Supprimer la plante</button></div>`;
+  $("#app").innerHTML = h;
+
+  if (p.sci && !p.wiki) {
+    wiki(p.sci).then(async w => {
+      const el = $("#pwiki"); if (!el) return;
+      if (w) { p.wiki = w; await DB.putPlant(p); el.innerHTML = `<p style="margin:0">${esc(w.extract)}</p><p class="sub" style="margin:6px 0 0"><a href="${esc(w.url)}" target="_blank" rel="noopener">Lire sur Wikipédia</a></p>`; }
+      else el.innerHTML = `<p class="sub" style="margin:0">${navigator.onLine ? "Pas de fiche Wikipédia en français pour cette espèce." : "Description disponible une fois connecté."}</p>`;
+    });
+  }
+  let t;
+  const autosave = () => { clearTimeout(t); t = setTimeout(async () => {
+    const cur = await DB.getPlant(id); if (!cur) return;
+    cur.location = $("#ploc").value.trim(); cur.notes = $("#pnotes").value; await DB.putPlant(cur);
+    const s = $("#saved"); if (s) s.textContent = "Enregistré";
+  }, 500); };
+  $("#ploc").addEventListener("input", autosave);
+  $("#pnotes").addEventListener("input", autosave);
+}
+async function addLog(id, text){
+  text = (text||"").trim(); if (!text) return;
+  const p = await DB.getPlant(id); if (!p) return;
+  p.log = p.log || []; p.log.push({t:Date.now(), text}); await DB.putPlant(p);
+  renderPlant(id);
+}
+
+/* ================== Réglages ================== */
+function renderSettings(){
+  const key = lsGet(LS_KEY);
+  let quota = null; try { quota = JSON.parse(lsGet(LS_QUOTA) || "null"); } catch(e) {}
+  const host = location.hostname || "ton-site";
+  let h = `<header class="top"><h1>Réglages</h1></header>
+  <div class="card"><h3>Clé Pl@ntNet</h3>
+    <p class="sub">${key ? "Ta clé est enregistrée sur ce téléphone." : "Colle ici la clé de ton compte Pl@ntNet (gratuit)."}</p>
+    <label class="f" for="key">Clé d'API</label>
+    <input type="password" id="key" value="${esc(key)}" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="2b10…">
+    <div class="row" style="margin-top:12px"><button class="btn primary" data-act="save-key">Enregistrer</button>
+    ${key ? `<button class="btn ghost" data-act="show-key">Afficher</button>` : ""}</div>
+    ${quota ? `<p class="sub" style="margin:10px 0 0">Il restait <b>${quota.n}</b> identifications aujourd'hui (au ${new Date(quota.t).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}).</p>` : ""}
+    <details style="margin-top:12px"><summary class="sub" style="font-weight:600">Obtenir sa clé</summary>
+      <ol class="sub" style="padding-left:20px">
+        <li>Crée un compte sur <a href="https://my.plantnet.org/signup" target="_blank" rel="noopener">my.plantnet.org</a>.</li>
+        <li>Dans ton compte, copie ta clé d'API (« API key »).</li>
+        <li>Dans les réglages de la clé, ajoute le domaine autorisé : <b>${esc(host)}</b></li>
+        <li>Colle la clé ci-dessus et touche Enregistrer.</li>
+      </ol></details>
+  </div>
+  <div class="card"><h3>Sauvegarde</h3>
+    <p class="sub">Ton jardin est stocké uniquement sur ce téléphone, dans l'app. Garde de temps en temps une copie dans Fichiers ou iCloud Drive.</p>
+    <div class="row"><button class="btn soft" data-act="export">Exporter</button><button class="btn ghost" data-act="import">Importer</button></div>
+    <p class="sub" id="store" style="margin:10px 0 0"></p>
+  </div>
+  <p class="credit" style="text-align:center">Herbier · identification par Pl@ntNet (application non officielle) · descriptions Wikipédia</p>`;
+  $("#app").innerHTML = h;
+  if (navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e => {
+    const el = $("#store"); if (el && e.usage != null) el.textContent = `Espace utilisé : ${(e.usage/1048576).toFixed(1)} Mo`;
+  }).catch(() => {});
+}
+async function doExport(){
+  const plants = await DB.allPlants();
+  const photos = {};
+  for (const p of plants) for (const i of (p.photoIds||[])) {
+    const raw = await DB.getPhotoRaw(i);
+    if (raw) photos[i] = await blobToDataURL(new Blob([raw.buf], {type:raw.type}));
+  }
+  const blob = new Blob([JSON.stringify({app:"herbier", version:1, date:new Date().toISOString(), plants, photos})], {type:"application/json"});
+  const name = `herbier-${new Date().toISOString().slice(0,10)}.json`;
+  const file = new File([blob], name, {type:"application/json"});
+  if (navigator.canShare && navigator.canShare({files:[file]})) {
+    try { await navigator.share({files:[file], title:"Sauvegarde Herbier"}); return; }
+    catch(e) { if (e.name === "AbortError") return; }
+  }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+async function doImport(file){
+  try {
+    const d = JSON.parse(await file.text());
+    if (!d || d.app !== "herbier" || !Array.isArray(d.plants)) throw new Error();
+    const existing = new Set((await DB.allPlants()).map(p => p.id));
+    let n = 0;
+    for (const p of d.plants) {
+      if (!p || !p.id || existing.has(p.id)) continue;
+      const photos = [];
+      for (const i of (p.photoIds||[])) {
+        const u = d.photos && d.photos[i]; if (!u) continue;
+        photos.push({id:i, blob: await (await fetch(u)).blob()});
+      }
+      p.photoIds = photos.map(x => x.id);
+      await DB.savePlantWithPhotos(p, photos); n++;
+    }
+    toast(n ? `${n} plante${n>1?"s":""} importée${n>1?"s":""}` : "Rien de nouveau à importer");
+  } catch(e) { toast("Ce fichier n'est pas une sauvegarde Herbier"); }
+}
+
+/* ================== Actions ================== */
+let organTarget = null;
+document.addEventListener("click", async e => {
+  const el = e.target.closest("[data-act]"); if (!el) return;
+  const act = el.dataset.act;
+  switch (act) {
+    case "pick": $("#filePick").click(); break;
+    case "rm-shot": {
+      const s = state.shots.find(x => x.id === el.dataset.id);
+      if (s) URL.revokeObjectURL(s.url);
+      state.shots = state.shots.filter(x => x.id !== el.dataset.id);
+      state.results = null; state.error = ""; state.openIdx = -1; render(); break;
+    }
+    case "organ": {
+      const s = state.shots.find(x => x.id === el.dataset.id); if (!s) break;
+      const k = ORGANS.findIndex(o => o[0] === s.organ);
+      s.organ = ORGANS[(k + 1) % ORGANS.length][0];
+      el.textContent = ORGAN_LABEL[s.organ] + " ▾";
+      if (state.results) { state.results = null; state.openIdx = -1; render(); }
+      break;
+    }
+    case "identify": runIdentify(); break;
+    case "reset": state.shots.forEach(s => URL.revokeObjectURL(s.url)); state.shots = []; state.results = null; state.error = ""; state.openIdx = -1; render(); break;
+    case "open-res": {
+      const i = +el.dataset.i; state.openIdx = state.openIdx === i ? -1 : i; render();
+      const card = document.querySelectorAll(".res")[i]; if (card && state.openIdx === i) card.scrollIntoView({behavior:"smooth", block:"start"});
+      break;
+    }
+    case "save": el.disabled = true; saveFromResult(+el.dataset.i); break;
+    case "save-unknown": el.disabled = true; saveFromResult(null); break;
+    case "to-settings": go("settings"); break;
+    case "to-identify": go("identify"); break;
+    case "open-plant": state.plantId = el.dataset.id; render(); window.scrollTo(0,0); break;
+    case "back": state.plantId = null; render(); window.scrollTo(0,0); break;
+    case "log-chip": addLog(state.plantId, el.dataset.v); break;
+    case "log-add": addLog(state.plantId, $("#logtxt").value); break;
+    case "log-del": {
+      const p = await DB.getPlant(state.plantId); if (!p) break;
+      p.log = (p.log||[]).filter(x => String(x.t) !== el.dataset.t); await DB.putPlant(p); renderPlant(p.id); break;
+    }
+    case "add-photo": $("#filePickOne").click(); break;
+    case "delete": {
+      const p = await DB.getPlant(state.plantId); if (!p) break;
+      if (!confirm(`Supprimer « ${displayName(p)} » et ses photos ? C'est définitif.`)) break;
+      await DB.deletePlant(p); state.plantId = null; toast("Plante supprimée"); render(); break;
+    }
+    case "save-key": {
+      const v = $("#key").value.trim(); lsSet(LS_KEY, v);
+      toast(v ? "Clé enregistrée" : "Clé effacée"); renderSettings(); break;
+    }
+    case "show-key": { const k = $("#key"); k.type = k.type === "password" ? "text" : "password"; el.textContent = k.type === "password" ? "Afficher" : "Masquer"; break; }
+    case "export": el.disabled = true; try { await doExport(); } catch(err) { toast("Export impossible"); } el.disabled = false; break;
+    case "import": $("#importPick").click(); break;
+  }
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && e.target.id === "logtxt") addLog(state.plantId, e.target.value);
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches(".res-head")) { e.preventDefault(); e.target.click(); }
+});
+$("#filePick").addEventListener("change", e => { const f = e.target.files; if (f && f.length) addFiles(f); e.target.value = ""; });
+$("#filePickOne").addEventListener("change", async e => {
+  const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f || !state.plantId) return;
+  try {
+    const pr = await prepare(f); const p = await DB.getPlant(state.plantId); if (!p) return;
+    const ph = {id:uid(), blob:pr.full};
+    p.photoIds = [...(p.photoIds||[]), ph.id];
+    if (!p.thumb) p.thumb = await blobToDataURL(pr.thumb);
+    await DB.savePlantWithPhotos(p, [ph]); toast("Photo ajoutée"); renderPlant(p.id);
+  } catch(err) { toast("Impossible d'ajouter cette photo"); }
+});
+$("#importPick").addEventListener("change", async e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) await doImport(f); });
+
+/* ================== Démarrage ================== */
+render();
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
