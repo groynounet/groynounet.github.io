@@ -1,5 +1,5 @@
 // Nocturnis : garde le jeu jouable hors ligne.
-const VERSION = "nocturnis-v1";
+const VERSION = "nocturnis-v2";
 const SHELL = ["./", "index.html", "icon.png", "manifest.webmanifest"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
