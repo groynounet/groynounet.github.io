@@ -70,6 +70,7 @@ p.hint{color:var(--ink-soft);font-size:13.5px;margin:4px 0 12px}
 .item.bad{border-color:var(--warn)}
 .wallrow{display:grid;grid-template-columns:34px 1fr 1fr 36px;gap:8px;align-items:end}
 .sloperow{margin:-2px 0 6px 42px}
+.sloperow .grid3{align-items:end}
 .wallrow .tag{font:600 18px/1 var(--plan-font);color:var(--accent);padding-bottom:10px;text-align:center}
 .iconbtn{border:0;background:none;color:var(--ink-soft);font-size:20px;padding:6px;line-height:1}
 .scanbox{padding:12px}
@@ -328,7 +329,7 @@ function buildGeom(room){
   if(area<0) walls.forEach(w=>{w.n=[-w.n[0],-w.n[1]];});
   // angle d'un meuble posé dos au mur, face vers l'intérieur
   walls.forEach(w=>{w.fa=Math.atan2(-w.n[0],w.n[1]);});
-  // rampants : hauteur au pied du mur (jambette) et largeur au sol jusqu'à la hauteur pleine
+  // rampants : hauteur au pied du rampant et largeur au sol jusqu'à la hauteur pleine (la longueur saisie, le long de la pente, est convertie)
   const H=+room.height||250; let hasSlope=false;
   walls.forEach((w,i)=>{ const sl=ws[i]&&ws[i].slope; if(sl&&sl.on&&+sl.depth>0&&+sl.jamb>=0&&+sl.jamb<H){ w.slope={jamb:+sl.jamb,depth:+sl.depth}; hasSlope=true; } });
   const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
@@ -986,12 +987,14 @@ function parseWish(text){
   // rampants : « mur B sous rampant, jambette de 100, rampant de 180 cm (ou 45°) »
   const slopes=[];
   for(const c of clauses){
-    if(!/rampant|sous pente|mansard|sous (les )?combles|plafond (en pente|incline|mansarde)|jambette/.test(c)) continue;
+    if(!/rampant|sous pente|mansard|sous (les )?combles|plafond (en pente|incline|mansarde)|jambette|hauteur au pied/.test(c)) continue;
     let m=c.match(/\bmur\s+([a-h])\b/); let wall=m?m[1].toUpperCase():null;
     if(!wall && slopes.length) wall=slopes[slopes.length-1].wall;
     const sl=slopes.find(x=>x.wall===wall&&wall)||{wall};
-    if((m=c.match(/jambette[^\d]{0,12}(\d{2,3})/))) sl.jamb=+m[1];
-    if((m=c.match(/(?:rampant|pente)[^\d]{0,20}(\d{2,3})\s*(?:cm|centimetres)?(?!\s*(?:°|deg))/))) sl.depth=+m[1];
+    let rest=c;
+    if((m=rest.match(/(?:jambette|hauteur au pied(?: du rampant)?|pied du rampant|au pied)[^\d]{0,14}(\d{2,3})/))){ sl.jamb=+m[1]; rest=rest.replace(m[0]," "); }
+    if((m=rest.match(/(\d{2,3})\s*(?:cm)?\s+au sol/))){ sl.depth=+m[1]; rest=rest.replace(m[0]," "); }
+    if((m=rest.match(/(?:longueur du rampant|rampant|pente)[^\d]{0,20}(\d{2,3})\s*(?:cm|centimetres)?(?!\s*(?:°|deg))/))) sl.len=+m[1];
     if((m=c.match(/(\d{1,2})\s*(?:°|deg)/))) sl.deg=+m[1];
     if(wall && !slopes.includes(sl)) slopes.push(sl);
   }
@@ -1020,6 +1023,7 @@ function validateProgram(p){
     const o={wall:sl.wall.toUpperCase()};
     if(isFinite(+sl.jamb)&&+sl.jamb>=0&&+sl.jamb<400) o.jamb=Math.round(+sl.jamb);
     if(isFinite(+sl.depth)&&+sl.depth>0&&+sl.depth<1000) o.depth=Math.round(+sl.depth);
+    if(isFinite(+sl.len)&&+sl.len>0&&+sl.len<1000) o.len=Math.round(+sl.len);
     if(isFinite(+sl.deg)&&+sl.deg>5&&+sl.deg<85) o.deg=+sl.deg;
     slopes.push(o);
   }
@@ -1162,7 +1166,7 @@ function render(fit){
       s+=`<line x1="${a3[0]}" y1="${a3[1]}" x2="${b3[0]}" y2="${b3[1]}" stroke="${SOFT}" stroke-width="${fs*.04}" stroke-dasharray="${fs*.15} ${fs*.25}" clip-path="url(#roomclip)"/>`;
       let ang=Math.atan2(w.u[1],w.u[0])*180/Math.PI; if(ang>90.5||ang<-89.5) ang+=180;
       const m1=V.add(V.mul(V.add(w.A,w.B),.5),V.mul(w.n,Math.max(x180,fs*2)+fs*.9));
-      if(x180>0 && x180<big) s+=`<text x="${m1[0]}" y="${m1[1]}" font-size="${fs*.7}" fill="${DIM}" text-anchor="middle" dominant-baseline="middle" font-family="IBM Plex Sans Condensed, Arial Narrow, sans-serif" paint-order="stroke" stroke="#FAFBFB" stroke-width="${fs*.25}" transform="rotate(${ang} ${m1[0]} ${m1[1]})">1,80 m · jambette ${fmtCm(jamb)} · rampant ${fmtCm(depth)}</text>`;
+      if(x180>0 && x180<big) s+=`<text x="${m1[0]}" y="${m1[1]}" font-size="${fs*.7}" fill="${DIM}" text-anchor="middle" dominant-baseline="middle" font-family="IBM Plex Sans Condensed, Arial Narrow, sans-serif" paint-order="stroke" stroke="#FAFBFB" stroke-width="${fs*.25}" transform="rotate(${ang} ${m1[0]} ${m1[1]})">1,80 m · pied ${fmtCm(jamb)} · rampant ${fmtCm(Math.hypot(depth,G.H-jamb))}</text>`;
     });
   }
   // ouvertures
@@ -1341,19 +1345,26 @@ function renderWalls(){
       <button class="iconbtn" data-delw="${i}" aria-label="Supprimer le mur ${LET(i)}" ${R.walls.length<=3?"disabled":""}>×</button></div>
       <div class="sloperow"><label class="row small" style="gap:6px"><input type="checkbox" data-sl="${i}" data-k="on" ${w.slope&&w.slope.on?"checked":""}> Mur ${LET(i)} sous rampant</label>
       ${w.slope&&w.slope.on?`<div class="grid3" style="margin-top:6px">
-        <label class="field">Jambette (cm)<input type="number" inputmode="decimal" data-sl="${i}" data-k="jamb" value="${w.slope.jamb??100}"></label>
-        <label class="field">Rampant au sol (cm)<input type="number" inputmode="decimal" data-sl="${i}" data-k="depth" value="${w.slope.depth??150}"></label>
+        <label class="field">Hauteur au pied du rampant (cm)<input type="number" inputmode="decimal" data-sl="${i}" data-k="jamb" value="${w.slope.jamb??100}"></label>
+        <label class="field">Longueur du rampant (cm)<input type="number" inputmode="decimal" data-sl="${i}" data-k="len" value="${slopeLen(R,w.slope)}"></label>
         <label class="field">Pente (°)<input type="number" inputmode="decimal" data-sl="${i}" data-k="deg" value="${slopeDeg(R,w.slope)}"></label>
       </div>`:""}</div>`;
-  }).join("")+(R.walls.some(w=>w.slope&&w.slope.on)?`<p class="hint">La hauteur sous plafond de la pièce (${R.height} cm) est la hauteur atteinte en haut du rampant. Rampant au sol : distance horizontale entre le pied de la jambette et l'endroit où le plafond devient plat.</p>`:"");
+  }).join("")+(R.walls.some(w=>w.slope&&w.slope.on)?`<p class="hint">La hauteur sous plafond de la pièce (${R.height} cm) est celle atteinte en haut du rampant. Longueur du rampant : mesurée le long de la pente, du pied du rampant jusqu'au début du plafond plat.</p>`:"");
   box.querySelectorAll("[data-sl]").forEach(el=>el.onchange=()=>{
     const i=+el.dataset.sl, w=R.walls[i]; w.slope=w.slope||{on:false,jamb:100,depth:150};
     const H=+R.height||250;
     if(el.dataset.k==="on") w.slope.on=el.checked;
     else { const v=parseFloat(String(el.value).replace(",","."));
       if(!(v>=0)) { renderWalls(); return; }
-      if(el.dataset.k==="jamb"){ if(v>=H){ toast("La jambette doit être plus basse que la hauteur sous plafond."); renderWalls(); return; } w.slope.jamb=v; }
-      if(el.dataset.k==="depth"){ if(v<=0){renderWalls();return;} w.slope.depth=v; }
+      if(el.dataset.k==="jamb"){
+        if(v>=H){ toast("La hauteur au pied du rampant doit être plus basse que la hauteur sous plafond."); renderWalls(); return; }
+        // on garde la longueur du rampant déjà saisie
+        const L=Math.hypot(w.slope.depth||150,H-(w.slope.jamb??100)), rise=H-v;
+        w.slope.jamb=v; w.slope.depth = L>rise ? Math.round(Math.sqrt(L*L-rise*rise)) : (w.slope.depth||150);
+      }
+      if(el.dataset.k==="len"){ const rise=H-(w.slope.jamb??100);
+        if(v<=rise){ toast(`La longueur du rampant doit dépasser ${fmtCm(rise)} cm, l'écart entre la hauteur au pied et le plafond.`); renderWalls(); return; }
+        w.slope.depth=Math.round(Math.sqrt(v*v-rise*rise)); }
       if(el.dataset.k==="deg"){ if(!(v>5&&v<85)){ toast("La pente doit être comprise entre 5° et 85°."); renderWalls(); return; } w.slope.depth=Math.round((H-w.slope.jamb)/Math.tan(v*Math.PI/180)); }
     }
     commitGeom();
@@ -1379,6 +1390,7 @@ function renderWalls(){
   else c.innerHTML=`<div class="status warn">Le contour ne se referme pas : écart de ${fmtCm(G.closeErr)} cm au coin 1${Math.abs(sumAng-expected)>=0.5?`, somme des angles ${r1(sumAng)}° au lieu de ${expected}°`:""}. Vérifiez une mesure, ou touchez « Fermer le contour » pour recalculer le dernier mur.</div>`;
 }
 const customAng=new Set();
+function slopeLen(R,sl){ const H=+R.height||250; return sl? Math.round(Math.hypot(sl.depth??150,H-(sl.jamb??100))) : ""; }
 function slopeDeg(R,sl){ const H=+R.height||250; return sl&&sl.depth>0? r1(Math.atan((H-sl.jamb)/sl.depth)*180/Math.PI):45; }
 function commitGeom(){ save(); props=[]; renderWalls(); renderOps(); render(true); renderSel(); }
 document.getElementById("addWall").onclick=()=>{room().walls.push({len:100,ang:90}); commitGeom();};
@@ -1525,7 +1537,7 @@ let sampleFn=null;
 function roomBrief(R,G){
   const walls=G.walls.map((w,i)=>`mur ${LET(i)} : ${fmtCm(w.len)} cm`).join(" ; ");
   const ops=R.openings.map(o=>`${OPN[o.type]} sur le mur ${LET(+o.wall)} (à ${o.pos} cm du coin ${+o.wall+1}, largeur ${o.width} cm${o.type==="window"?`, allège ${o.sill??90} cm`:""})`).join(" ; ")||"aucune";
-  const sl=R.walls.map((w,i)=>w.slope&&w.slope.on?`mur ${LET(i)} sous rampant (jambette ${w.slope.jamb} cm, rampant ${w.slope.depth} cm au sol)`:"").filter(Boolean).join(" ; ");
+  const sl=R.walls.map((w,i)=>w.slope&&w.slope.on?`mur ${LET(i)} sous rampant (hauteur au pied ${w.slope.jamb} cm, longueur du rampant ${slopeLen(R,w.slope)} cm)`:"").filter(Boolean).join(" ; ");
   return `Pièce « ${R.name} », ${(G.area/10000).toFixed(1)} m², hauteur sous plafond ${R.height} cm. Murs dans le sens horaire : ${walls}. Ouvertures : ${ops}.${sl?" Rampants déjà saisis : "+sl+".":""}`;
 }
 function wishPrompt(R,G,text){
@@ -1538,8 +1550,8 @@ ${cat}
 Clés génériques : lit (taille au mieux), litDouble (160 sinon 140), custom (meuble hors catalogue : donne name, w largeur, d profondeur, h hauteur en cm, estimés si non précisés).
 
 Réponds uniquement par un objet JSON de la forme :
-{"items":[{"key":"<clé>","n":1,"wall":"A","under":true,"underSlope":true,"corner":true,"center":true,"near":"porte","away":"porte","facing":"fenetre","seats":6,"chevets":2}],"slopes":[{"wall":"B","jamb":100,"depth":180,"deg":40}],"comment":"<une phrase en français si une demande est impossible ou ambiguë, sinon vide>"}
-Règles : n'inclus que les meubles demandés ; omets les champs sans consigne. wall = lettre du mur contre lequel poser le meuble. under = sous une fenêtre. underSlope = sous le rampant (partie basse du plafond). corner = dans un coin. center = centré sur son mur. near / away / facing valent "porte", "fenetre" ou une clé de meuble. seats = nombre de couverts d'une table. chevets = nombre de tables de chevet d'un lit (0 si « sans chevet »). Les chaises d'une table s'expriment par seats, pas par des items chaise. slopes décrit un mur sous rampant (plafond en pente) : jamb = hauteur de la jambette en cm, depth = largeur du rampant mesurée au sol en cm, deg = pente en degrés ; n'indique que les valeurs données, slopes vide sinon. kallaxH est un KALLAX posé couché (77 cm de haut), adapté sous un rampant. La chaise du bureau est ajoutée automatiquement. Un meuble refusé (« pas de… ») n'apparaît pas.
+{"items":[{"key":"<clé>","n":1,"wall":"A","under":true,"underSlope":true,"corner":true,"center":true,"near":"porte","away":"porte","facing":"fenetre","seats":6,"chevets":2}],"slopes":[{"wall":"B","jamb":100,"len":210,"deg":40}],"comment":"<une phrase en français si une demande est impossible ou ambiguë, sinon vide>"}
+Règles : n'inclus que les meubles demandés ; omets les champs sans consigne. wall = lettre du mur contre lequel poser le meuble. under = sous une fenêtre. underSlope = sous le rampant (partie basse du plafond). corner = dans un coin. center = centré sur son mur. near / away / facing valent "porte", "fenetre" ou une clé de meuble. seats = nombre de couverts d'une table. chevets = nombre de tables de chevet d'un lit (0 si « sans chevet »). Les chaises d'une table s'expriment par seats, pas par des items chaise. slopes décrit un mur sous rampant (plafond en pente) : jamb = hauteur au pied du rampant en cm (on dit aussi jambette), len = longueur du rampant mesurée le long de la pente en cm, depth = seulement si l'utilisateur donne explicitement une largeur horizontale au sol, deg = pente en degrés ; n'indique que les valeurs données, slopes vide sinon. kallaxH est un KALLAX posé couché (77 cm de haut), adapté sous un rampant. La chaise du bureau est ajoutée automatiquement. Un meuble refusé (« pas de… ») n'apparaît pas.
 
 Description de l'utilisateur :
 """${text.slice(0,2000)}"""`;
@@ -1573,11 +1585,14 @@ document.getElementById("wishGo").onclick=async()=>{
   for(const sl of (prog.slopes||[])){
     const i=R.walls.findIndex((w,k)=>LET(k)===sl.wall); if(i<0){ slopeLines.push(`Mur ${sl.wall} : n'existe pas dans cette pièce`); continue; }
     const w=R.walls[i], H=+R.height||250; const old=w.slope||{jamb:100,depth:150};
-    const jamb = sl.jamb!=null && sl.jamb<H ? sl.jamb : old.jamb;
-    const depth = sl.depth!=null ? sl.depth : (sl.deg!=null ? Math.round((H-jamb)/Math.tan(sl.deg*Math.PI/180)) : old.depth);
+    const jamb = sl.jamb!=null && sl.jamb<H ? sl.jamb : old.jamb, rise=H-jamb;
+    let depth=old.depth, bad="";
+    if(sl.len!=null){ if(sl.len>rise) depth=Math.round(Math.sqrt(sl.len*sl.len-rise*rise)); else bad=` — longueur ${sl.len} cm trop courte pour monter de ${rise} cm, à corriger dans l'onglet Pièce`; }
+    else if(sl.depth!=null) depth=sl.depth;
+    else if(sl.deg!=null) depth=Math.round(rise/Math.tan(sl.deg*Math.PI/180));
     w.slope={on:true,jamb,depth};
-    const guessed = sl.depth==null && sl.deg==null && !(old&&old.on);
-    slopeLines.push(`Mur ${sl.wall} sous rampant (jambette ${jamb} cm, rampant ${depth} cm au sol${guessed?" — valeur par défaut, à corriger dans l'onglet Pièce":""})`);
+    const guessed = sl.len==null && sl.depth==null && sl.deg==null && !(old&&old.on);
+    slopeLines.push(`Mur ${sl.wall} sous rampant (hauteur au pied ${jamb} cm, longueur du rampant ${slopeLen(R,w.slope)} cm${guessed?" — valeur par défaut, à corriger dans l'onglet Pièce":""}${bad})`);
   }
   if(slopeLines.length){ save(); renderWalls(); render(false); }
   if(!prog.items.length){ msg.innerHTML=`<div class="status ok"><b>Compris :</b><br>${slopeLines.map(esc).join("<br>")}</div>`; return; }
