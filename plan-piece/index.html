@@ -917,8 +917,9 @@ function runProgram(room,G,prog,seed){
         // rangements : un second exemplaire se met de préférence à côté du premier
         const prev = k>0 ? ctx.placed.filter(p=>p.key===r.key).pop() : null;
         let it=null;
-        if(prev){ const s=CAT[r.key]; it=tryRelative(ctx,r.key,prev,[{dx:s.w+0.5,dy:0},{dx:-(s.w+0.5),dy:0}]); if(it) delete it.parent; }
-        if(!it) it=placeWish(ctx,r.key,r,rng,unmet,lab);
+        if(prev){ const s=CAT[r.key]; it=tryRelative(ctx,r.key,prev,[{dx:s.w+0.5,dy:0},{dx:-(s.w+0.5),dy:0}]); if(it){ delete it.parent; it._s=(prev._s||0)+20; it.wall=prev.wall; } }
+        // le premier d'une série part d'un coin pour laisser la place aux suivants
+        if(!it) it=placeWish(ctx,r.key,r,rng,unmet,lab, (k===0&&n>1)?{score:c=>cornerBonus(c,ctx)*60}:{});
         if(!it) missing.push(lab.toLowerCase());
       }
     }
