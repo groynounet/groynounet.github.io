@@ -1,0 +1,1735 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plan Pièce</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Plan Pièce">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#0F5E73">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#22313B; --ink-soft:#5B6B75; --line:#D5DCE0; --bg:#EEF1F3; --panel:#FFFFFF;
+  --accent:#0F5E73; --accent-soft:#E2EEF1; --warn:#B4400C; --warn-soft:#FBEDE6; --ok:#2F7D4F;
+  --paper:#FFFFFF; --on-accent:#FFFFFF;
+  --radius-s:6px; --radius-m:10px;
+  --plan-font:"IBM Plex Sans Condensed","Arial Narrow",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#E4EAED; --ink-soft:#9AAAB3; --line:#33424B; --bg:#141C21; --panel:#1C262C;
+    --accent:#5FB3C9; --accent-soft:#1E3640; --warn:#F08A5D; --warn-soft:#3A2419; --ok:#6CC08F; --on-accent:#0E1A1F; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#E4EAED; --ink-soft:#9AAAB3; --line:#33424B; --bg:#141C21; --panel:#1C262C;
+  --accent:#5FB3C9; --accent-soft:#1E3640; --warn:#F08A5D; --warn-soft:#3A2419; --ok:#6CC08F; --on-accent:#0E1A1F; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+button,input,select{font:inherit;color:inherit}
+.app{display:flex;flex-direction:column;height:100dvh;max-width:900px;margin:0 auto}
+header{display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 8px) 16px 8px}
+header h1{font:600 19px/1.2 var(--plan-font);margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.roomsel{border:1px solid var(--line);background:var(--panel);border-radius:var(--radius-s);padding:6px 8px;max-width:46%}
+.planwrap{position:relative;flex:0 0 auto;height:48dvh;min-height:260px;margin:0 16px;border-radius:var(--radius-m);overflow:hidden;background:var(--paper);border:1px solid var(--line)}
+#plan{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+.zoombar{position:absolute;right:8px;bottom:8px;display:flex;gap:6px}
+.zoombar button{width:36px;height:36px;border-radius:50%;border:1px solid #CBD3D8;background:#fff;color:#22313B;font-size:18px;line-height:1;box-shadow:0 1px 2px rgba(34,49,59,.15)}
+.surface{position:absolute;left:10px;top:8px;font:500 13px/1.3 var(--plan-font);color:#22313B;background:rgba(255,255,255,.85);padding:3px 7px;border-radius:4px}
+nav.tabs{display:flex;gap:4px;margin:10px 16px 0;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-m);padding:4px}
+nav.tabs button{flex:1;border:0;background:none;padding:8px 2px;border-radius:7px;font-size:14px;color:var(--ink-soft)}
+nav.tabs button[aria-selected="true"]{background:var(--accent);color:var(--on-accent);font-weight:600}
+textarea{width:100%;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:var(--radius-s);padding:10px;font-family:inherit;font-size:16px;line-height:1.4;resize:vertical;margin-top:6px}
+main{flex:1;overflow-y:auto;padding:12px 16px calc(env(safe-area-inset-bottom) + 24px);-webkit-overflow-scrolling:touch}
+section{display:none}
+section.on{display:block}
+h2{font:600 17px/1.3 var(--plan-font);margin:4px 0 8px}
+p.hint{color:var(--ink-soft);font-size:13.5px;margin:4px 0 12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--ink-soft)}
+.field input,.field select{border:1px solid var(--line);background:var(--panel);border-radius:var(--radius-s);padding:8px;font-size:16px;color:var(--ink);min-width:0}
+.field input{width:100%}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:var(--radius-s);padding:9px 12px;font-size:14.5px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.btn.danger{color:var(--warn)}
+.btn:disabled{opacity:.45}
+.list{display:flex;flex-direction:column;gap:8px;margin:8px 0}
+.item{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-m);padding:10px 12px}
+.item.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.item.bad{border-color:var(--warn)}
+.wallrow{display:grid;grid-template-columns:34px 1fr 1fr 36px;gap:8px;align-items:end}
+.wallrow .tag{font:600 18px/1 var(--plan-font);color:var(--accent);padding-bottom:10px;text-align:center}
+.iconbtn{border:0;background:none;color:var(--ink-soft);font-size:20px;padding:6px;line-height:1}
+.scanbox{padding:12px}
+.scanbox h2{margin-top:0}
+.status{border-radius:var(--radius-s);padding:8px 10px;font-size:13.5px;margin:8px 0}
+.status.ok{background:var(--accent-soft)}
+.status.warn{background:var(--warn-soft);color:var(--warn)}
+.fname{font-weight:600}
+.fmeta{font-size:13px;color:var(--ink-soft)}
+.price{font:600 15px/1.2 var(--plan-font);white-space:nowrap}
+.flex1{flex:1;min-width:0}
+a{color:var(--accent)}
+.total{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--line);padding-top:10px;margin-top:6px;font-weight:600}
+.total .price{font-size:19px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:7px 12px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.propnav{display:flex;align-items:center;gap:8px;margin:6px 0 4px}
+.propnav span{flex:1;text-align:center;font-size:14px;color:var(--ink-soft)}
+details{margin:10px 0}
+summary{cursor:pointer;color:var(--accent);font-size:14.5px;padding:4px 0}
+.small{font-size:12.5px;color:var(--ink-soft)}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 18px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.on{opacity:1}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (min-width:760px){ .planwrap{height:56dvh} }
+@media print{
+  @page{size:A4 portrait;margin:12mm}
+  body{background:#fff;color:#000}
+  header .roomsel,nav.tabs,.zoombar,main>section,.noprint{display:none!important}
+  .app{height:auto;display:block;max-width:none}
+  header{padding:0 0 4mm}
+  .planwrap{height:170mm;border:0;margin:0}
+  #printlist{display:block!important;padding:0}
+  main{overflow:visible;padding:0}
+}
+#printlist{display:none}
+#printlist table{width:100%;border-collapse:collapse;font-size:11px}
+#printlist td,#printlist th{border-bottom:1px solid #ccc;padding:3px 4px;text-align:left}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1 id="title">Plan Pièce</h1>
+    <select class="roomsel" id="roomsel" aria-label="Pièce affichée"></select>
+  </header>
+
+  <div class="planwrap">
+    <svg id="plan" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Plan 2D coté de la pièce"></svg>
+    <div class="surface" id="surface"></div>
+    <div class="zoombar">
+      <button id="zin" aria-label="Zoomer">+</button>
+      <button id="zout" aria-label="Dézoomer">−</button>
+      <button id="zfit" aria-label="Recadrer le plan">⤢</button>
+    </div>
+  </div>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="piece" aria-selected="true">Pièce</button>
+    <button role="tab" data-tab="ouv" aria-selected="false">Ouvertures</button>
+    <button role="tab" data-tab="amen" aria-selected="false">Aménager</button>
+    <button role="tab" data-tab="liste" aria-selected="false">Liste</button>
+  </nav>
+
+  <main>
+    <!-- PIÈCE -->
+    <section id="tab-piece" class="on">
+      <div class="item scanbox">
+        <h2>Importer un scan LiDAR</h2>
+        <p class="hint">Scannez la pièce avec l'app gratuite OpenPlan3D, puis Export › Export Editable Plan (JSON), ou Export Project Package (ZIP), et enregistrez le fichier dans Fichiers. Les exports RoomPlan JSON d'autres apps sont aussi acceptés.</p>
+        <div class="row">
+          <label class="btn primary">Importer un scan<input id="scanFile" type="file" accept=".json,.zip,application/json,application/zip" hidden></label>
+          <label class="row small" style="gap:6px"><input type="checkbox" id="scanSnap" checked> Redresser les angles à ±2,5°</label>
+        </div>
+        <div id="scanMsg"></div>
+      </div>
+      <div class="grid2" style="margin-top:14px">
+        <label class="field">Nom de la pièce<input id="rname" type="text"></label>
+        <label class="field">Hauteur sous plafond (cm)<input id="rheight" type="number" inputmode="decimal" min="150" max="600"></label>
+      </div>
+      <h2 style="margin-top:14px">Forme rapide</h2>
+      <div class="row">
+        <label class="field" style="flex:1">Longueur (cm)<input id="qL" type="number" inputmode="decimal" value="400"></label>
+        <label class="field" style="flex:1">Largeur (cm)<input id="qW" type="number" inputmode="decimal" value="320"></label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="mkRect">Créer un rectangle</button>
+        <button class="btn" id="mkL">Créer une forme en L</button>
+      </div>
+
+      <h2 style="margin-top:18px">Murs</h2>
+      <p class="hint">Saisissez les murs dans l'ordre, en faisant le tour de la pièce dans le sens des aiguilles d'une montre depuis le coin 1. Mesures intérieures, d'un coin à l'autre. L'angle est l'angle intérieur au coin suivant : 90° pour un coin normal, 270° pour un coin rentrant.</p>
+      <div id="walls" class="list"></div>
+      <div class="row">
+        <button class="btn" id="addWall">Ajouter un mur</button>
+        <button class="btn" id="closeWall">Fermer le contour</button>
+      </div>
+      <div id="closure"></div>
+
+      <details>
+        <summary>Pièces, sauvegarde et export</summary>
+        <div class="row" style="margin-top:8px">
+          <button class="btn" id="newRoom">Nouvelle pièce</button>
+          <button class="btn" id="dupRoom">Dupliquer</button>
+          <button class="btn danger" id="delRoom">Supprimer cette pièce</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn" id="expPng">Image du plan (PNG)</button>
+          <button class="btn" id="expPdf">PDF / imprimer</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn" id="expJson">Sauvegarder la pièce (.json)</button>
+          <label class="btn">Ouvrir une sauvegarde<input id="impJson" type="file" accept=".json,application/json" hidden></label>
+        </div>
+        <label class="field" style="margin-top:10px;max-width:220px">Épaisseur des murs dessinés (cm)<input id="rthick" type="number" inputmode="decimal" min="5" max="60"></label>
+      </details>
+    </section>
+
+    <!-- OUVERTURES -->
+    <section id="tab-ouv">
+      <p class="hint">La position se mesure depuis le coin de début du mur (le coin dont le numéro précède la lettre du mur), jusqu'au bord de l'ouverture. Largeur = passage de l'huisserie.</p>
+      <div class="row">
+        <button class="btn" data-addop="door">Ajouter une porte</button>
+        <button class="btn" data-addop="window">Ajouter une fenêtre</button>
+        <button class="btn" data-addop="french">Ajouter une porte-fenêtre</button>
+        <button class="btn" data-addop="opening">Ajouter un passage</button>
+      </div>
+      <div id="ops" class="list"></div>
+    </section>
+
+    <!-- AMÉNAGER -->
+    <section id="tab-amen">
+      <h2>Votre aménagement</h2>
+      <label class="field" for="wish">Décrivez ce que vous avez en tête : meubles, murs (lettres du plan), fenêtre, porte, coins.</label>
+      <textarea id="wish" rows="4" placeholder="Ex. lit 160 contre le mur C, loin de la porte, avec deux chevets ; bureau sous la fenêtre ; armoire près de la porte ; pas de commode"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="btn primary" id="wishGo">Aménager selon ma description</button>
+        <button class="btn" id="wishStop" hidden>Arrêter</button>
+      </div>
+      <div id="wishMsg"></div>
+      <h2 style="margin-top:18px">Ou partir d'un usage</h2>
+      <div class="chips" id="usages"></div>
+      <div class="row">
+        <button class="btn primary" id="propose">Proposer un aménagement</button>
+        <button class="btn" id="clearF">Vider la pièce</button>
+      </div>
+      <div class="propnav noprint" id="propnav" hidden>
+        <button class="btn" id="prevP" aria-label="Proposition précédente">‹</button>
+        <span id="propLabel"></span>
+        <button class="btn" id="nextP" aria-label="Proposition suivante">›</button>
+      </div>
+      <div id="layoutMsg"></div>
+      <div id="selPanel"></div>
+      <details id="catalogBox">
+        <summary>Ajouter un meuble</summary>
+        <div id="catalog" class="list"></div>
+        <h2 style="margin-top:12px">Meuble personnalisé</h2>
+        <div class="grid2">
+          <label class="field">Nom<input id="cName" type="text" placeholder="Ex. buffet"></label>
+          <label class="field">Prix (€)<input id="cPrice" type="number" inputmode="decimal"></label>
+        </div>
+        <div class="grid3" style="margin-top:8px">
+          <label class="field">Largeur<input id="cW" type="number" inputmode="decimal" placeholder="cm"></label>
+          <label class="field">Profondeur<input id="cD" type="number" inputmode="decimal" placeholder="cm"></label>
+          <label class="field">Hauteur<input id="cH" type="number" inputmode="decimal" placeholder="cm"></label>
+        </div>
+        <label class="field" style="margin-top:8px">Lien du produit<input id="cUrl" type="url" placeholder="https://"></label>
+        <button class="btn" id="addCustom" style="margin-top:8px">Ajouter ce meuble</button>
+      </details>
+      <p class="small">Touchez un meuble sur le plan pour le sélectionner, faites-le glisser pour le déplacer : il se cale contre les murs à moins de 10 cm. Les distances aux murs s'affichent en pointillés.</p>
+    </section>
+
+    <!-- LISTE -->
+    <section id="tab-liste">
+      <div id="flist" class="list"></div>
+      <div id="ftotal"></div>
+      <p class="small">Prix relevés sur ikea.com/fr le 9 novembre 2026, éco-participation incluse, hors livraison et montage. Ils peuvent changer : vérifiez sur la fiche avant d'acheter.</p>
+    </section>
+
+    <div id="printlist"></div>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* ================= Catalogue (vérifié sur ikea.com/fr le 09/11/2026) ================= */
+const CAT = {
+  lit160:{name:"MALM Cadre lit coffre 160×200",short:"Lit 160",w:175,d:210,h:100,price:599,url:"https://www.ikea.com/fr/fr/p/malm-cadre-lit-coffre-blanc-20404806/",kind:"bed",clr:{side:60,foot:60}},
+  lit140:{name:"MALM Cadre lit coffre 140×200",short:"Lit 140",w:155,d:210,h:100,price:549,url:"https://www.ikea.com/fr/fr/p/malm-cadre-lit-coffre-blanc-90404799/",kind:"bed",clr:{side:60,foot:60}},
+  lit90:{name:"MALM Cadre de lit haut + sommier Lönset 90×200",short:"Lit 90",w:105,d:209,h:100,price:209,url:"https://www.ikea.com/fr/fr/p/malm-cadre-de-lit-haut-blanc-loenset-s29019594/",kind:"bed",clr:{side:60,foot:50},single:true},
+  chevet:{name:"BRIMNES Table de chevet",short:"Chevet",w:39,d:41,h:53,price:49.99,url:"https://www.ikea.com/fr/fr/p/brimnes-table-de-chevet-blanc-10234942/",kind:"small",clr:{front:0}},
+  armoire:{name:"PAX / FORSAND Armoire-penderie 100×60×236",short:"Armoire",w:100,d:60,h:236,price:284,url:"https://www.ikea.com/fr/fr/p/-s09502667/",kind:"wardrobe",clr:{front:70}},
+  commode:{name:"HAUGA Commode 6 tiroirs",short:"Commode",w:138,d:46,h:84,price:229,url:"https://www.ikea.com/fr/fr/p/hauga-commode-6-tiroirs-blanc-00581536/",kind:"chest",clr:{front:70}},
+  bureau:{name:"MICKE Bureau 105×50",short:"Bureau",w:105,d:50,h:75,price:89.99,url:"https://www.ikea.com/fr/fr/p/-80213074/",kind:"desk",clr:{front:80}},
+  chaiseB:{name:"MARKUS Chaise de bureau",short:"Chaise",w:62,d:60,h:129,price:199,url:"https://www.ikea.com/fr/fr/p/markus-chaise-de-bureau-vissle-gris-fonce-70261150/",kind:"chair",clr:{front:0}},
+  billy:{name:"BILLY Bibliothèque 80×28×202",short:"BILLY",w:80,d:28,h:202,price:59.99,url:"https://www.ikea.com/fr/fr/p/billy-bibliotheque-blanc-20522046/",kind:"shelf",clr:{front:60}},
+  kallax:{name:"KALLAX Étagère 77×147",short:"KALLAX",w:77,d:39,h:147,price:59.99,url:"https://www.ikea.com/fr/fr/p/kallax-etagere-blanc-80275887/",kind:"shelf",clr:{front:60}},
+  canape:{name:"KIVIK Canapé 3 places, Tresund anthracite",short:"Canapé",w:228,d:95,h:83,price:649,url:"https://www.ikea.com/fr/fr/p/kivik-canape-3-places-tresund-anthracite-s09482829/",kind:"sofa",clr:{front:40}},
+  fauteuil:{name:"POÄNG Fauteuil, bouleau/Gunnared beige",short:"Fauteuil",w:68,d:82,h:100,price:189,url:"https://www.ikea.com/fr/fr/p/poaeng-fauteuil-plaque-bouleau-gunnared-beige-s59514385/",kind:"armchair",clr:{front:40}},
+  tableBasse:{name:"LACK Table basse 90×55",short:"Table basse",w:90,d:55,h:45,price:22.99,url:"https://www.ikea.com/fr/fr/p/-90449905/",kind:"low",clr:{front:0}},
+  meubleTV:{name:"BESTÅ Banc TV 180×40×38",short:"Meuble TV",w:180,d:40,h:38,price:80,url:"https://www.ikea.com/fr/fr/p/-00474070/",kind:"tv",clr:{front:60}},
+  table:{name:"VIHALS Table extensible 120/180×74",short:"Table",w:120,d:74,h:75,price:129,url:"https://www.ikea.com/fr/fr/p/vihals-table-extensible-blanc-20589777/",kind:"table",clr:{}},
+  chaise:{name:"VIHALS Chaise, blanc/Tibbleby",short:"Chaise",w:49,d:55,h:81,price:39.99,url:"https://www.ikea.com/fr/fr/p/vihals-chaise-blanc-tibbleby-beige-gris-30592760/",kind:"chair",clr:{front:0}},
+};
+const USAGES = [
+  {key:"chambre",label:"Chambre"},
+  {key:"enfant",label:"Chambre enfant / amis"},
+  {key:"bureau",label:"Bureau"},
+  {key:"salon",label:"Salon"},
+  {key:"repas",label:"Salle à manger"},
+];
+
+/* ================= Vecteurs ================= */
+const V = {
+  add:(a,b)=>[a[0]+b[0],a[1]+b[1]], sub:(a,b)=>[a[0]-b[0],a[1]-b[1]],
+  mul:(a,k)=>[a[0]*k,a[1]*k], dot:(a,b)=>a[0]*b[0]+a[1]*b[1],
+  cross:(a,b)=>a[0]*b[1]-a[1]*b[0], len:a=>Math.hypot(a[0],a[1]),
+  dist:(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]),
+};
+const r1 = x=>Math.round(x*10)/10;
+const fmtCm = x=>{const v=Math.round(x); return String(v);};
+const fmtEur = x=>x==null?"—":x.toLocaleString("fr-FR",{minimumFractionDigits:x%1?2:0,maximumFractionDigits:2})+" €";
+const uid = ()=>Math.random().toString(36).slice(2,9);
+const esc = s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const LET = i=>String.fromCharCode(65+(i%26))+(i>=26?Math.floor(i/26):"");
+
+/* ================= Géométrie de la pièce ================= */
+function buildGeom(room){
+  const pts=[[0,0]]; let h=0; const ws=room.walls;
+  for(let i=0;i<ws.length;i++){
+    const L=+ws[i].len||0, p=pts[pts.length-1];
+    pts.push([p[0]+L*Math.cos(h), p[1]+L*Math.sin(h)]);
+    h += (180-(+ws[i].ang||90))*Math.PI/180;
+  }
+  const end=pts.pop();
+  const closeErr = V.dist(end,[0,0]);
+  const n=pts.length;
+  const walls=[];
+  for(let i=0;i<n;i++){
+    const A=pts[i], B=pts[(i+1)%n];
+    const L=V.dist(A,B)||1e-9; const u=[(B[0]-A[0])/L,(B[1]-A[1])/L];
+    walls.push({i,A,B,u,n:[-u[1],u[0]],len:L,ang:Math.atan2(u[1],u[0])});
+  }
+  let area=0, cx=0, cy=0;
+  for(let i=0;i<n;i++){const a=pts[i],b=pts[(i+1)%n],c=V.cross(a,b); area+=c; cx+=(a[0]+b[0])*c; cy+=(a[1]+b[1])*c;}
+  area/=2;
+  const centroid = Math.abs(area)>1e-6?[cx/(6*area),cy/(6*area)]:[0,0];
+  // Si le tour a été saisi dans le sens inverse, on retourne les normales vers l'intérieur
+  if(area<0) walls.forEach(w=>{w.n=[-w.n[0],-w.n[1]];});
+  // angle d'un meuble posé dos au mur, face vers l'intérieur
+  walls.forEach(w=>{w.fa=Math.atan2(-w.n[0],w.n[1]);});
+  const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+  const bbox={x0:Math.min(...xs),y0:Math.min(...ys),x1:Math.max(...xs),y1:Math.max(...ys)};
+  const perim=walls.reduce((s,w)=>s+w.len,0);
+  return {pts,walls,area:Math.abs(area),centroid,bbox,closeErr,perim,end};
+}
+function pointInPoly(p,pts){
+  let inside=false;
+  for(let i=0,j=pts.length-1;i<pts.length;j=i++){
+    const a=pts[i],b=pts[j];
+    if(((a[1]>p[1])!==(b[1]>p[1])) && (p[0] < (b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])) inside=!inside;
+  }
+  return inside;
+}
+function outerPoly(G,t){
+  const n=G.walls.length, out=[];
+  for(let i=0;i<n;i++){
+    const w0=G.walls[(i-1+n)%n], w1=G.walls[i];
+    const p0=V.sub(w0.A,V.mul(w0.n,t)), p1=V.sub(w1.A,V.mul(w1.n,t));
+    const den=V.cross(w0.u,w1.u);
+    if(Math.abs(den)<1e-9){out.push(p1);continue;}
+    const s=V.cross(V.sub(p1,p0),w1.u)/den;
+    out.push(V.add(p0,V.mul(w0.u,s)));
+  }
+  return out;
+}
+
+/* ================= Rectangles orientés ================= */
+// r = {cx,cy,w,d,a} ; ux = axe de la largeur ; fy = face avant
+function axes(a){return [[Math.cos(a),Math.sin(a)],[-Math.sin(a),Math.cos(a)]];}
+function corners(r,shrink=0){
+  const [ux,fy]=axes(r.a), hw=Math.max(0,r.w/2-shrink), hd=Math.max(0,r.d/2-shrink), c=[r.cx,r.cy];
+  return [V.add(V.add(c,V.mul(ux,-hw)),V.mul(fy,-hd)),V.add(V.add(c,V.mul(ux,hw)),V.mul(fy,-hd)),
+          V.add(V.add(c,V.mul(ux,hw)),V.mul(fy,hd)),V.add(V.add(c,V.mul(ux,-hw)),V.mul(fy,hd))];
+}
+function overlap(r1,r2,tol=0.6){
+  const c1=corners(r1,tol), c2=corners(r2,tol);
+  const ax=[...axes(r1.a),...axes(r2.a)];
+  for(const a of ax){
+    let mn1=Infinity,mx1=-Infinity,mn2=Infinity,mx2=-Infinity;
+    for(const p of c1){const v=V.dot(p,a);mn1=Math.min(mn1,v);mx1=Math.max(mx1,v);}
+    for(const p of c2){const v=V.dot(p,a);mn2=Math.min(mn2,v);mx2=Math.max(mx2,v);}
+    if(mx1<=mn2||mx2<=mn1) return false;
+  }
+  return true;
+}
+function insideRoom(r,G){
+  const cs=corners(r,0.6);
+  if(!cs.every(p=>pointInPoly(p,G.pts))) return false;
+  // aucun sommet de la pièce (angle rentrant) dans le rectangle
+  const [ux,fy]=axes(r.a), c=[r.cx,r.cy];
+  for(const p of G.pts){
+    const d=V.sub(p,c), x=V.dot(d,ux), y=V.dot(d,fy);
+    if(Math.abs(x)<r.w/2-0.6 && Math.abs(y)<r.d/2-0.6) return false;
+  }
+  return true;
+}
+function frontZone(r,depth,extraW=0){
+  const [,fy]=axes(r.a);
+  return {cx:r.cx+fy[0]*(r.d/2+depth/2),cy:r.cy+fy[1]*(r.d/2+depth/2),w:r.w+extraW,d:depth,a:r.a};
+}
+function rel(r,dx,dy){ // point local -> global
+  const [ux,fy]=axes(r.a); return [r.cx+ux[0]*dx+fy[0]*dy, r.cy+ux[1]*dx+fy[1]*dy];
+}
+
+/* ================= Ouvertures ================= */
+function opGeom(op,G){
+  const w=G.walls[op.wall]; if(!w) return null;
+  const pos=Math.max(0,+op.pos||0), width=Math.max(10,+op.width||80);
+  const s=V.add(w.A,V.mul(w.u,pos)), e=V.add(s,V.mul(w.u,width));
+  return {w,s,e,width,pos};
+}
+function openingZones(room,G){
+  const Z=[];
+  for(const op of room.openings){
+    const g=opGeom(op,G); if(!g) continue;
+    const mid=V.mul(V.add(g.s,g.e),.5), a=g.w.ang;
+    if(op.type==="window"){
+      Z.push({kind:"window",op,sill:+op.sill||90,r:{cx:mid[0]+g.w.n[0]*10,cy:mid[1]+g.w.n[1]*10,w:g.width,d:20,a}});
+    } else {
+      const inward = op.swing!=="out" && op.type!=="opening";
+      const leaf = op.type==="french" ? g.width/2 : g.width;
+      const depth = Math.max(inward?leaf:0, 80); // débattement + passage minimal
+      Z.push({kind:"door",op,r:{cx:mid[0]+g.w.n[0]*depth/2,cy:mid[1]+g.w.n[1]*depth/2,w:g.width+10,d:depth,a}});
+    }
+  }
+  return Z;
+}
+
+/* ================= Zones de dégagement d'un meuble ================= */
+function itemZones(f){
+  const c=CAT[f.key]||f.custom||{}; const r=f; const z=[];
+  if(c.kind==="bed"){
+    const side=c.clr.side, len=r.d-45;
+    const zl={cx:0,cy:0,w:side,d:len,a:r.a}, zr={...zl};
+    [zl.cx,zl.cy]=rel(r,-(r.w/2+side/2),22.5); [zr.cx,zr.cy]=rel(r,(r.w/2+side/2),22.5);
+    if(c.single){ z.push(f.side==="left"?zl:zr); } else { z.push(zl,zr); }
+    z.push(frontZone(r,c.clr.foot, c.single?0:0));
+  } else if(c.kind==="table"){
+    if(f.wallMode){ // table contre un mur : chaises devant et aux deux bouts
+      z.push(frontZone(r,75));
+      for(const sg of [-1,1]){ const c=rel(r,sg*(r.w/2+30),0); z.push({cx:c[0],cy:c[1],w:60,d:r.d,a:r.a}); }
+    } else {
+      // zone de la table et de ses chaises : 75 cm côtés chaises, 60 aux bouts
+      z.push({cx:r.cx,cy:r.cy,w:r.w+120,d:r.d+150,a:r.a});
+    }
+  } else if(c.clr && c.clr.front){
+    z.push(frontZone(r,c.clr.front));
+  } else if(f.custom){
+    z.push(frontZone(r,60));
+  }
+  return z;
+}
+function specOf(f){ return CAT[f.key]||f.custom; }
+
+/* ================= Contrôles (conflits) ================= */
+function checkAll(room,G){
+  const F=room.furniture, OZ=openingZones(room,G), res={};
+  for(const f of F){
+    const s=specOf(f); const msgs=[];
+    if(!insideRoom(f,G)) msgs.push("dépasse des murs");
+    for(const z of OZ){
+      if(z.kind==="door" && overlap(f,z.r)) msgs.push("gêne l'ouverture d'une porte");
+      if(z.kind==="window" && s.h > z.sill-2 && overlap(f,z.r)) msgs.push("masque une fenêtre");
+    }
+    for(const g of F){
+      if(g===f) continue;
+      const related = rootId(g,F)===rootId(f,F);
+      const tucked = related && (specOf(f).kind==="chair"||specOf(g).kind==="chair") && (specOf(f).kind==="table"||specOf(g).kind==="table");
+      if(!tucked && overlap(f,g)) msgs.push("chevauche « "+specOf(g).short+" »");
+      if(!related) for(const z of itemZones(g)) if(overlap(f,z)) {msgs.push("encombre le dégagement de « "+specOf(g).short+" »");break;}
+    }
+    res[f.id]=[...new Set(msgs)];
+  }
+  return res;
+}
+
+/* ================= Moteur d'aménagement ================= */
+function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+function makeCtx(room,G){
+  const OZ=openingZones(room,G);
+  return {room,G,OZ,placed:[],
+    doors:OZ.filter(z=>z.kind==="door").map(z=>[z.r.cx,z.r.cy]),
+    windows:room.openings.filter(o=>o.type!=="door").map(o=>{const g=opGeom(o,G);return g?{p:V.mul(V.add(g.s,g.e),.5),wall:o.wall}:null;}).filter(Boolean)};
+}
+// validité d'un corps (et de ses zones) vis-à-vis de ce qui est déjà posé
+function rootId(it,list){ let cur=it, guard=0; while(cur&&cur.parent&&guard++<6){ const p=list.find(x=>x.id===cur.parent); if(!p) return cur.parent; cur=p; } return cur.id; }
+function fits(ctx,body,zones,opts={}){
+  const {G,OZ,placed}=ctx;
+  const myRoot=rootId(body,placed);
+  if(!insideRoom(body,G)) return false;
+  const s=specOf(body);
+  for(const z of OZ){
+    if(z.kind==="door" && overlap(body,z.r)) return false;
+    if(z.kind==="window" && s.h> z.sill-2 && overlap(body,z.r)) return false;
+  }
+  for(const p of placed){
+    if(overlap(body,p)) return false;
+    const related = rootId(p,placed)===myRoot;
+    if(!related) for(const z of p._zones) if(overlap(body,z)) return false;
+  }
+  for(const z of zones){
+    if(!insideRoom(z,G)) return false;
+    for(const p of placed){
+      if(rootId(p,placed)===myRoot) continue;
+      if(overlap(z,p)) return false;
+    }
+  }
+  return true;
+}
+function wallCandidates(ctx,key,extra={},spec=null){
+  const s=spec||CAT[key], out=[];
+  ctx.G.walls.forEach((w,wi)=>{
+    if(w.len<s.w) return;
+    const steps=[]; for(let x=0;x<=w.len-s.w;x+=5) steps.push(x); steps.push(w.len-s.w);
+    for(const x of steps){
+      const c=V.add(V.add(w.A,V.mul(w.u,x+s.w/2)),V.mul(w.n,s.d/2+0.5));
+      const it={key,cx:c[0],cy:c[1],w:s.w,d:s.d,a:w.fa,wall:wi,off:x,...extra}; if(spec&&!CAT[key]) it.custom=spec; out.push(it);
+    }
+  });
+  return out;
+}
+function nearestWallDist(ctx,p){ return Math.min(...ctx.G.walls.map(w=>{const t=Math.max(0,Math.min(w.len,V.dot(V.sub(p,w.A),w.u)));return V.dist(p,V.add(w.A,V.mul(w.u,t)));})); }
+function rayToWall(G,p,dir){
+  let best=Infinity;
+  for(const w of G.walls){
+    const den=V.cross(dir,w.u); if(Math.abs(den)<1e-9) continue;
+    const ap=V.sub(w.A,p); const t=V.cross(ap,w.u)/den, s=V.cross(ap,dir)/den;
+    if(t>0.01 && s>=-0.01 && s<=w.len+0.01) best=Math.min(best,t);
+  }
+  return best;
+}
+const minDoorDist=(ctx,p)=>ctx.doors.length?Math.min(...ctx.doors.map(d=>V.dist(d,p))):300;
+const minWinDist=(ctx,p)=>ctx.windows.length?Math.min(...ctx.windows.map(w=>V.dist(w.p,p))):300;
+function cornerBonus(c,ctx){ const w=ctx.G.walls[c.wall]; return (c.off<1 || c.off>w.len-c.w-1)?1:0; }
+
+function choose(cands,rng,temp){
+  if(!cands.length) return null;
+  cands.sort((a,b)=>b._s-a._s);
+  if(!rng) return cands[0];
+  const top=cands.slice(0,6), m=top[0]._s;
+  const ws=top.map(c=>Math.exp((c._s-m)/temp)); const tot=ws.reduce((a,b)=>a+b,0);
+  let x=rng()*tot; for(let i=0;i<top.length;i++){x-=ws[i]; if(x<=0) return top[i];}
+  return top[0];
+}
+function commit(ctx,item){
+  item.id=item.id||uid(); item._zones=itemZones(item); ctx.placed.push(item); return item;
+}
+function tryWallItem(ctx,key,scoreFn,rng,temp=12,extra={},after=null){
+  const ok=[];
+  for(const c of wallCandidates(ctx,key,extra)){
+    c.id=uid(); const z=itemZones(c);
+    if(!fits(ctx,c,z)) continue;
+    c._s=scoreFn(c); ok.push(c);
+  }
+  if(!after){ const pick=choose(ok,rng,temp); return pick?commit(ctx,pick):null; }
+  // ordre de préférence (bruité si variante), et validation du meuble associé
+  ok.forEach(c=>c._k=c._s+(rng?-temp*Math.log(-Math.log(Math.max(1e-9,rng()))):0));
+  ok.sort((a,b)=>b._k-a._k);
+  for(const c of ok.slice(0,80)){
+    const n=ctx.placed.length; const it=commit(ctx,c);
+    if(after(it)) return it;
+    ctx.placed.length=n;
+  }
+  return null;
+}
+function tryRelative(ctx,key,parent,poses){
+  // poses : [{dx,dy,da}] dans le repère du parent ; renvoie le premier qui passe
+  const s=CAT[key];
+  for(const p of poses){
+    const c=rel(parent,p.dx,p.dy);
+    const it={key,cx:c[0],cy:c[1],w:s.w,d:s.d,a:parent.a+(p.da||0),parent:parent.id,id:uid()};
+    if(fits(ctx,it,itemZones(it))) return commit(ctx,it);
+  }
+  return null;
+}
+
+/* --- Rôles --- */
+function placeBed(ctx,keys,rng){
+  for(const key of keys){
+    const s=CAT[key];
+    const variants = s.single?[{side:"left"},{side:"right"}]:[{}];
+    let best=null;
+    for(const v of variants){
+      const pick=(()=>{const ok=[];
+        for(const c of wallCandidates(ctx,key,v)){ c.id=uid(); if(!fits(ctx,c,itemZones(c))) continue;
+          const w=ctx.G.walls[c.wall];
+          let sc = 0;
+          sc += Math.min(minDoorDist(ctx,[c.cx,c.cy]),350)*0.25;
+          if(!s.single) sc -= Math.abs(c.off+c.w/2-w.len/2)*0.35; else sc += cornerBonus(c,ctx)*40;
+          if(ctx.windows.some(x=>x.wall===c.wall)) sc -= 25;
+          // tête de lit visible depuis la porte : préférer un lit qui ne fait pas face à la porte
+          c._s=sc; ok.push(c);}
+        return choose(ok,rng,15);})();
+      if(pick && (!best || pick._s>best._s)) best=pick;
+    }
+    if(best) return commit(ctx,best);
+  }
+  return null;
+}
+function placeChevets(ctx,bed,count){
+  const s=CAT.chevet, res=[];
+  const dy=-bed.d/2+s.d/2;
+  const L={dx:-(bed.w/2+2+s.w/2),dy}, R={dx:(bed.w/2+2+s.w/2),dy};
+  let order = CAT[bed.key].single ? [bed.side==="left"?L:R] : [L,R];
+  for(const p of order){ if(res.length>=count) break; const it=tryRelative(ctx,"chevet",bed,[p]); if(it) res.push(it); }
+  return res;
+}
+function placeStorage(ctx,key,rng,pref={}){
+  return tryWallItem(ctx,key,c=>{
+    let sc=cornerBonus(c,ctx)*20;
+    if(pref.nearDoor) sc-=minDoorDist(ctx,[c.cx,c.cy])*0.12;
+    if(pref.nearDesk){const d=ctx.placed.find(p=>p.key==="bureau"); if(d) sc-=V.dist([d.cx,d.cy],[c.cx,c.cy])*0.15;}
+    if(pref.facing){const t=ctx.placed.find(p=>p.key===pref.facing); if(t){ sc-=V.dist([t.cx,t.cy],[c.cx,c.cy])*0.05; }}
+    if(pref.awayFromWin) sc+=Math.min(minWinDist(ctx,[c.cx,c.cy]),300)*0.05;
+    return sc;
+  },rng,10);
+}
+function placeDesk(ctx,rng){
+  let chair=null; const s=CAT.chaiseB;
+  const desk=tryWallItem(ctx,"bureau",c=>{
+    const p=[c.cx,c.cy]; let sc=-minWinDist(ctx,p)*0.3;
+    // lumière latérale : bureau sur un mur perpendiculaire à la fenêtre, proche d'elle
+    for(const wv of ctx.windows){ const ww=ctx.G.walls[wv.wall], dw=ctx.G.walls[c.wall];
+      if(Math.abs(V.dot(ww.u,dw.u))<0.1 && V.dist(wv.p,p)<200) sc+=20; }
+    sc-=Math.max(0,150-minDoorDist(ctx,p))*0.2;
+    return sc;
+  },rng,10,{},d=>(chair=tryRelative(ctx,"chaiseB",d,[{dx:0,dy:d.d/2+s.d/2+2,da:Math.PI}])));
+  if(!desk) return null;
+  return {desk,chair};
+}
+function placeSalon(ctx,rng){
+  const sofa=tryWallItem(ctx,"canape",c=>{
+    const w=ctx.G.walls[c.wall]; const fy=w.n;
+    const depth=rayToWall(ctx.G,[c.cx+fy[0]*c.d/2,c.cy+fy[1]*c.d/2],fy);
+    let sc=-Math.abs(Math.min(depth,600)-300)*0.25;
+    sc-=Math.abs(c.off+c.w/2-w.len/2)*0.15;
+    sc+=Math.min(minDoorDist(ctx,[c.cx,c.cy]),300)*0.1;
+    return sc;
+  },rng,10);
+  if(!sofa) return {};
+  const tb=CAT.tableBasse;
+  const coffee=tryRelative(ctx,"tableBasse",sofa,[{dx:0,dy:sofa.d/2+40+tb.d/2}]);
+  const [,sfy]=axes(sofa.a);
+  const tv=tryWallItem(ctx,"meubleTV",c=>{
+    const w=ctx.G.walls[c.wall]; const facing=V.dot(w.n,sfy);
+    if(facing>-0.9) return -500;
+    const sf=rel(sofa,0,sofa.d/2), d=V.sub([c.cx,c.cy],sf);
+    const along=V.dot(d,sfy), lat=Math.abs(V.cross(sfy,d));
+    return -Math.abs(along-260)*0.4 - lat*0.6;
+  },null);
+  let tvOk=tv; if(tv && tv._s<-400){ ctx.placed=ctx.placed.filter(p=>p!==tv); tvOk=null; }
+  // fauteuil à côté de la table basse, tourné vers elle, sinon contre un mur
+  let arm=null;
+  if(coffee){
+    const f=CAT.fauteuil, dx=coffee.w/2+35+f.d/2;
+    arm=tryRelative(ctx,"fauteuil",coffee,[{dx:dx,dy:0,da:Math.PI/2},{dx:-dx,dy:0,da:-Math.PI/2}]);
+    if(arm) arm.parent=sofa.id;
+  }
+  if(!arm) arm=tryWallItem(ctx,"fauteuil",c=>-(coffee?V.dist([coffee.cx,coffee.cy],[c.cx,c.cy]):0)*0.3,rng,10);
+  return {sofa,coffee,tv:tvOk,arm};
+}
+function placeDining(ctx,rng,seats){
+  const G=ctx.G, s=CAT.table, cs=CAT.chaise;
+  const len = seats>4?180:120;
+  const base=G.walls.reduce((a,b)=>b.len>a.len?b:a).ang;
+  const best=[];
+  for(const da of [0,Math.PI/2]){
+    for(let x=G.bbox.x0;x<=G.bbox.x1;x+=10) for(let y=G.bbox.y0;y<=G.bbox.y1;y+=10){
+      const t={key:"table",cx:x,cy:y,w:len,d:s.d,a:base+da,id:uid(),seats};
+      const z=itemZones(t);
+      if(!fits(ctx,t,z)) continue;
+      if(ctx.OZ.some(o=>o.kind==="door"&&overlap(z[0],o.r))) continue;
+      t._s=-V.dist([x,y],G.centroid)*0.2 - Math.max(0,120-minDoorDist(ctx,[x,y]))*0.3;
+      best.push(t);
+    }
+  }
+  const pick=choose(best,rng,6); if(!pick) return null;
+  const table=commit(ctx,pick);
+  const per=seats/2, gap=len/per;
+  for(let i=0;i<per;i++){
+    const dx=-len/2+gap*(i+.5);
+    for(const sgn of [-1,1]){
+      const c=rel(table,dx,sgn*(table.d/2+cs.d/2-12));
+      const ch={key:"chaise",cx:c[0],cy:c[1],w:cs.w,d:cs.d,a:table.a+(sgn>0?Math.PI:0),parent:table.id,id:uid()};
+      ch._zones=[]; ctx.placed.push(ch);
+    }
+  }
+  return table;
+}
+
+function placeDiningWall(ctx,rng){
+  const cs=CAT.chaise; const kids=[];
+  const t=tryWallItem(ctx,"table",c=>-Math.max(0,150-minDoorDist(ctx,[c.cx,c.cy]))*0.3-V.dist([c.cx,c.cy],ctx.G.centroid)*0.1,rng,8,{wallMode:true,seats:4},tb=>{
+    if(ctx.OZ.some(o=>o.kind==="door"&&tb._zones.some(z=>overlap(z,o.r)))) return false;
+    const poses=[{dx:-30,dy:tb.d/2+cs.d/2-12,da:Math.PI},{dx:30,dy:tb.d/2+cs.d/2-12,da:Math.PI},
+                 {dx:tb.w/2+cs.d/2-12,dy:0,da:Math.PI/2},{dx:-(tb.w/2+cs.d/2-12),dy:0,da:-Math.PI/2}];
+    for(const p of poses){ const c=rel(tb,p.dx,p.dy); const ch={key:"chaise",cx:c[0],cy:c[1],w:cs.w,d:cs.d,a:tb.a+p.da,parent:tb.id,id:uid(),_zones:[]};
+      if(!insideRoom(ch,ctx.G)) return false; kids.push(ch); }
+    return true;
+  });
+  if(!t) return null;
+  kids.forEach(k=>ctx.placed.push(k));
+  return t;
+}
+function runLayout(room,G,usage,seed){
+  const rng = seed? mulberry(seed*7919+13):null;
+  const ctx=makeCtx(room,G); const missing=[], notes=[];
+  const H=+room.height||250;
+  const need=(ok,label)=>{ if(!ok) missing.push(label); };
+  if(usage==="chambre"){
+    const bed=placeBed(ctx,["lit160","lit140","lit90"],rng); need(bed,"lit");
+    if(bed&&bed.key==="lit90") notes.push("Un lit double ne laisse pas 60 cm de passage de chaque côté : lit 90 proposé.");
+    if(bed) placeChevets(ctx,bed,2);
+    if(H>=240) need(placeStorage(ctx,"armoire",rng,{nearDoor:true}),"armoire"); else missing.push("armoire (plafond trop bas pour 236 cm)");
+    placeStorage(ctx,"commode",rng,{awayFromWin:false});
+  } else if(usage==="enfant"){
+    const bed=placeBed(ctx,["lit90"],rng); need(bed,"lit");
+    if(bed) placeChevets(ctx,bed,1);
+    need(placeDesk(ctx,rng),"bureau");
+    if(H>=240) need(placeStorage(ctx,"armoire",rng,{nearDoor:true}),"armoire");
+    placeStorage(ctx,"kallax",rng,{nearDesk:true});
+  } else if(usage==="bureau"){
+    need(placeDesk(ctx,rng),"bureau");
+    const b1=placeStorage(ctx,"billy",rng,{nearDesk:true}); need(b1,"bibliothèque");
+    if(b1){ const s=CAT.billy; tryRelative(ctx,"billy",b1,[{dx:s.w+0.5,dy:0},{dx:-(s.w+0.5),dy:0}]); }
+    placeStorage(ctx,"kallax",rng,{nearDesk:true});
+    tryWallItem(ctx,"fauteuil",c=>-Math.abs(minWinDist(ctx,[c.cx,c.cy])-120)*0.1,rng,10);
+  } else if(usage==="salon"){
+    const r=placeSalon(ctx,rng); need(r.sofa,"canapé"); need(r.tv,"meuble TV face au canapé");
+    placeStorage(ctx,"billy",rng,{awayFromWin:true});
+  } else if(usage==="repas"){
+    let t=placeDining(ctx,rng,6);
+    if(!t){ t=placeDining(ctx,rng,4); }
+    if(!t){ t=placeDiningWall(ctx,rng); if(t) notes.push("Pièce étroite : table contre le mur, 4 couverts."); }
+    need(t,"table et chaises");
+    placeStorage(ctx,"kallax",rng,{});
+  }
+  return packLayout(ctx,missing,notes);
+}
+function proposals(room,usage){
+  const G=buildGeom(room); const out=[]; const seen=new Set();
+  for(let seed=0;seed<36;seed++){
+    const r= typeof usage==="string" ? runLayout(room,G,usage,seed) : runProgram(room,G,usage,seed);
+    const sig=r.items.map(i=>i.key+Math.round(i.cx/10)+","+Math.round(i.cy/10)+","+Math.round(i.a*10)).sort().join("|");
+    if(seen.has(sig)) continue; seen.add(sig); out.push(r);
+  }
+  out.sort((a,b)=>(a.missing.length-b.missing.length)||((a.unmet||[]).length-(b.unmet||[]).length)||(b.score-a.score));
+  return out.slice(0,8);
+}
+function packLayout(ctx,missing,notes,unmet=[]){
+  const items=ctx.placed.map(p=>{const o={id:p.id,key:p.key,cx:r1(p.cx),cy:r1(p.cy),w:p.w,d:p.d,a:p.a}; if(p.custom)o.custom=p.custom; if(p.parent)o.parent=p.parent; if(p.side)o.side=p.side; if(p.seats)o.seats=p.seats; if(p.wallMode)o.wallMode=true; return o;});
+  const score=ctx.placed.reduce((s,p)=>s+(p._s||0),0)+ctx.placed.length*200-unmet.length*150;
+  return {items,missing,notes,unmet,score};
+}
+
+/* ================= Aménagement décrit en texte libre ================= */
+// Programme : {items:[{key,n,wall,under,near,away,corner,center,facing,seats,chevets,label,w,d,h}]}
+const PROG_KEYS=["lit","litDouble","lit160","lit140","lit90","chevet","armoire","commode","bureau","chaiseB","billy","kallax","canape","fauteuil","tableBasse","meubleTV","table","chaise","custom"];
+const PRIORITY=["lit","litDouble","lit160","lit140","lit90","canape","table","bureau","armoire","commode","meubleTV","billy","kallax","fauteuil","tableBasse","custom","chevet","chaise","chaiseB"];
+const SPOTS={porte:"la porte",fenetre:"la fenêtre"};
+function spotPoints(ctx,what){
+  if(what==="porte") return ctx.doors;
+  if(what==="fenetre") return ctx.windows.map(w=>w.p);
+  const it=ctx.placed.find(p=>p.key===what||(what==="lit"&&/^lit/.test(p.key)));
+  return it?[[it.cx,it.cy]]:[];
+}
+const minDist=(pts,p)=>pts.length?Math.min(...pts.map(q=>V.dist(q,p))):null;
+function underWindow(ctx,c){
+  // au moins 60 % de la plus petite des deux largeurs en recouvrement
+  return ctx.room.openings.some(o=>{ if(o.type!=="window"||+o.wall!==c.wall) return false;
+    const ov=Math.min(o.pos+o.width,c.off+c.w)-Math.max(o.pos,c.off); return ov>=0.6*Math.min(o.width,c.w); });
+}
+function windowCenterGap(ctx,c){
+  const ws=ctx.room.openings.filter(o=>o.type==="window"&&+o.wall===c.wall);
+  return ws.length?Math.min(...ws.map(o=>Math.abs(o.pos+o.width/2-(c.off+c.w/2)))):999;
+}
+function defaultScore(ctx,key,c){
+  const p=[c.cx,c.cy], w=ctx.G.walls[c.wall];
+  switch(CAT[key]?.kind){
+    case "bed": return Math.min(minDoorDist(ctx,p),350)*0.25 - (CAT[key].single?-cornerBonus(c,ctx)*40:Math.abs(c.off+c.w/2-w.len/2)*0.35) - (ctx.windows.some(x=>x.wall===c.wall)?25:0);
+    case "desk": return -minWinDist(ctx,p)*0.3 - Math.max(0,150-minDoorDist(ctx,p))*0.2;
+    case "sofa": { const depth=rayToWall(ctx.G,[c.cx+w.n[0]*c.d/2,c.cy+w.n[1]*c.d/2],w.n); return -Math.abs(Math.min(depth,600)-300)*0.25 - Math.abs(c.off+c.w/2-w.len/2)*0.15 + Math.min(minDoorDist(ctx,p),300)*0.1; }
+    case "wardrobe": return cornerBonus(c,ctx)*20 - minDoorDist(ctx,p)*0.12;
+    default: return cornerBonus(c,ctx)*15;
+  }
+}
+// pose contre un mur en respectant au mieux les consignes ; renvoie l'élément posé
+function placeWish(ctx,key,req,rng,unmet,label,opts={}){
+  const spec=opts.spec||CAT[key];
+  const wallIdx = req.wall!=null ? ctx.G.walls.findIndex((w,i)=>LET(i)===String(req.wall).toUpperCase()) : -1;
+  const facingPts = req.facing ? spotPoints(ctx,req.facing) : [];
+  const nearPts = req.near ? spotPoints(ctx,req.near) : [];
+  const awayPts = req.away ? spotPoints(ctx,req.away) : [];
+  const variants = spec.single?[{side:"left"},{side:"right"}]:[{}];
+  const all=[];
+  for(const v of variants) for(const c of wallCandidates(ctx,key,{...v,...(opts.extra||{})},opts.spec)){
+    c.id=uid(); if(!fits(ctx,c,itemZones(c))) continue;
+    const p=[c.cx,c.cy]; const [,fy]=axes(c.a);
+    let sc=defaultScore(ctx,key,c)+(opts.score?opts.score(c):0);
+    if(nearPts.length) sc-=minDist(nearPts,p)*0.6;
+    if(awayPts.length) sc+=Math.min(minDist(awayPts,p),500)*0.4;
+    if(facingPts.length){ const t=facingPts[0], dir=V.sub(t,p), L=V.len(dir)||1; sc+=V.dot(fy,V.mul(dir,1/L))*80; }
+    if(req.center){ const w=ctx.G.walls[c.wall]; sc-=Math.abs(c.off+c.w/2-w.len/2)*0.8; }
+    if(req.under) sc-=Math.min(windowCenterGap(ctx,c),300)*0.8;
+    c._strict = (wallIdx<0||c.wall===wallIdx) && (!req.under||underWindow(ctx,c)) && (!req.corner||cornerBonus(c,ctx));
+    c._s=sc; all.push(c);
+  }
+  const strict=all.filter(c=>c._strict);
+  const pool=strict.length?strict:all;
+  pool.forEach(c=>c._k=c._s+(rng?-(ctx.temp||8)*Math.log(-Math.log(Math.max(1e-9,rng()))):0));
+  pool.sort((a,b)=>b._k-a._k);
+  let placed=null;
+  for(const c of pool.slice(0,80)){
+    const n=ctx.placed.length; const it=commit(ctx,c);
+    if(!opts.after||opts.after(it)){ placed=it; break; }
+    ctx.placed.length=n;
+  }
+  if(!placed) return null;
+  // ce qui n'a pas pu être respecté
+  if(!strict.length || !placed._strict){
+    if(wallIdx>=0 && placed.wall!==wallIdx) unmet.push(`${label} : pas de place contre le mur ${LET(wallIdx)}, posé contre le mur ${LET(placed.wall)}`);
+    else if(req.wall!=null && wallIdx<0) unmet.push(`${label} : le mur ${String(req.wall).toUpperCase()} n'existe pas dans cette pièce`);
+    if(req.under && !underWindow(ctx,placed)) unmet.push(`${label} : impossible sous la fenêtre${spec.h>85?" (trop haut pour l'allège)":""}`);
+    if(req.corner && !cornerBonus(placed,ctx)) unmet.push(`${label} : aucun coin libre, posé le long d'un mur`);
+  }
+  if(req.near && nearPts.length && minDist(nearPts,[placed.cx,placed.cy])>200) unmet.push(`${label} : pas de place près de ${SPOTS[req.near]||"« "+req.near+" »"}`);
+  return placed;
+}
+function labelOf(r){ return r.label || (r.key==="custom"?r.name:(CAT[r.key]?.short||({lit:"Lit",litDouble:"Lit double"})[r.key]||r.key)); }
+function runProgram(room,G,prog,seed){
+  const rng = seed? mulberry(seed*7919+29):null;
+  const ctx=makeCtx(room,G); const missing=[], notes=[], unmet=[];
+  ctx.temp = seed<12?8:(seed<24?30:80); // plus de diversité pour trouver un compromis entre consignes
+  const H=+room.height||250;
+  const items=(prog.items||[]).filter(r=>PROG_KEYS.includes(r.key));
+  const has=k=>items.find(r=>r.key===k);
+  const chairsReq=has("chaise"), coffeeReq=has("tableBasse"), tvReq=has("meubleTV");
+  const ordered=[...items].sort((a,b)=>PRIORITY.indexOf(a.key)-PRIORITY.indexOf(b.key));
+  for(const r of ordered){
+    const n=Math.max(1,Math.min(6,+r.n||1)); const label=labelOf(r);
+    for(let k=0;k<n;k++){
+      const lab = n>1?`${label} ${k+1}`:label;
+      if(/^lit/.test(r.key)){
+        const keys = r.key==="lit"?["lit160","lit140","lit90"]: r.key==="litDouble"?["lit160","lit140"]:[r.key];
+        let bed=null; for(const kk of keys){ bed=placeWish(ctx,kk,r,rng,unmet,lab); if(bed) break; }
+        if(!bed){ missing.push(lab.toLowerCase()); continue; }
+        if(bed.key!==keys[0]) notes.push(`${lab} : ${CAT[bed.key].short} posé, un lit plus grand ne laisse pas 60 cm de passage.`);
+        const nc = r.chevets!=null ? +r.chevets : (has("chevet")? (+has("chevet").n||(CAT[bed.key].single?1:2)) : (CAT[bed.key].single?1:2));
+        if(nc>0){ const got=placeChevets(ctx,bed,nc); if(got.length<nc) unmet.push(`Chevets : ${got.length} sur ${nc} posés à côté du lit`); }
+      } else if(r.key==="chevet"){ if(!items.some(x=>/^lit/.test(x.key))){ const it=placeWish(ctx,"chevet",r,rng,unmet,lab); if(!it) missing.push(lab.toLowerCase()); } }
+      else if(r.key==="bureau"){
+        let chair=null; const cs=CAT.chaiseB;
+        const desk=placeWish(ctx,"bureau",r,rng,unmet,lab,{after:d=>(chair=tryRelative(ctx,"chaiseB",d,[{dx:0,dy:d.d/2+cs.d/2+2,da:Math.PI}]))});
+        if(!desk) missing.push(lab.toLowerCase());
+      } else if(r.key==="chaiseB"){ /* posée avec le bureau */ }
+      else if(r.key==="canape"){
+        const sofa=placeWish(ctx,"canape",r,rng,unmet,lab);
+        if(!sofa){ missing.push(lab.toLowerCase()); continue; }
+        if(coffeeReq && !coffeeReq._done && !coffeeReq.wall && !coffeeReq.near){
+          const tb=CAT.tableBasse; const c=tryRelative(ctx,"tableBasse",sofa,[{dx:0,dy:sofa.d/2+40+tb.d/2}]);
+          if(c) coffeeReq._done=true;
+        }
+      } else if(r.key==="tableBasse"){
+        if(r._done) continue;
+        const it=placeWish(ctx,"tableBasse",r,rng,unmet,lab); if(!it) missing.push(lab.toLowerCase());
+      } else if(r.key==="meubleTV"){
+        const sofa=ctx.placed.find(p=>p.key==="canape");
+        const score = (sofa&&!r.facing) ? (c=>{ const [,sfy]=axes(sofa.a); const w=ctx.G.walls[c.wall]; if(V.dot(w.n,sfy)>-0.9) return -300; const sf=rel(sofa,0,sofa.d/2), d=V.sub([c.cx,c.cy],sf); return -Math.abs(V.dot(d,sfy)-260)*0.4-Math.abs(V.cross(sfy,d))*0.6; }) : null;
+        const it=placeWish(ctx,"meubleTV",r,rng,unmet,lab,{score});
+        if(!it) missing.push(lab.toLowerCase());
+        else if(sofa && !r.facing && V.dot(ctx.G.walls[it.wall].n,axes(sofa.a)[1])>-0.9) unmet.push("Meuble TV : pas de mur libre face au canapé");
+      } else if(r.key==="table"){
+        const seats = Math.max(2,Math.min(8, +r.seats || (chairsReq? +chairsReq.n||4 : 4)));
+        let t=null;
+        if(r.wall==null && !r.corner){ t = (seats>4 ? placeDining(ctx,rng,6) : null) || placeDining(ctx,rng,4); }
+        if(!t){ t=placeDiningWall(ctx,rng); if(t){ if(r.wall==null&&!r.corner) notes.push("Table posée contre un mur faute de place au centre (4 couverts)."); else if(r.wall!=null && LET(t.wall)!==String(r.wall).toUpperCase()) unmet.push(`Table : pas de place contre le mur ${String(r.wall).toUpperCase()}`); } }
+        if(!t) missing.push("table et chaises");
+        else if(seats>4 && t.seats<6) unmet.push(`Table : ${t.seats} couverts au lieu de ${seats}`);
+      } else if(r.key==="chaise"){ if(!has("table")){ const it=placeWish(ctx,"chaise",r,rng,unmet,lab); if(!it) missing.push(lab.toLowerCase()); } }
+      else if(r.key==="armoire" && H<240){ missing.push("armoire (plafond trop bas pour 236 cm)"); }
+      else if(r.key==="fauteuil"){
+        const coffee=ctx.placed.find(p=>p.key==="tableBasse");
+        let arm=null;
+        if(coffee && r.wall==null && !r.near && !r.under && !r.corner){
+          const f=CAT.fauteuil, dx=coffee.w/2+35+f.d/2;
+          arm=tryRelative(ctx,"fauteuil",coffee,[{dx,dy:0,da:Math.PI/2},{dx:-dx,dy:0,da:-Math.PI/2}]);
+        }
+        if(!arm) arm=placeWish(ctx,"fauteuil",r,rng,unmet,lab);
+        if(!arm) missing.push(lab.toLowerCase());
+      } else if(r.key==="custom"){
+        const w=+r.w, d=+r.d; if(!(w>0&&d>0)) { missing.push(lab.toLowerCase()+" (dimensions inconnues)"); continue; }
+        const spec={name:r.name||"Meuble",short:r.name||"Meuble",w,d,h:+r.h||80,price:null,url:"",kind:"custom",clr:{front:60}};
+        const it=placeWish(ctx,"custom",r,rng,unmet,lab,{spec});
+        if(!it) missing.push(lab.toLowerCase());
+      } else {
+        // rangements : un second exemplaire se met de préférence à côté du premier
+        const prev = k>0 ? ctx.placed.filter(p=>p.key===r.key).pop() : null;
+        let it=null;
+        if(prev){ const s=CAT[r.key]; it=tryRelative(ctx,r.key,prev,[{dx:s.w+0.5,dy:0},{dx:-(s.w+0.5),dy:0}]); if(it) delete it.parent; }
+        if(!it) it=placeWish(ctx,r.key,r,rng,unmet,lab);
+        if(!it) missing.push(lab.toLowerCase());
+      }
+    }
+  }
+  items.forEach(r=>delete r._done);
+  return packLayout(ctx,missing,notes,[...new Set(unmet)]);
+}
+
+/* --- Lecture d'une description en français (sans connexion) --- */
+const NUMW={un:1,une:1,deux:2,trois:3,quatre:4,cinq:5,six:6,sept:7,huit:8};
+function deaccent(s){ return s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase(); }
+function parseWish(text){
+  const t=" "+deaccent(text).replace(/[’']/g," ")+" ";
+  const clauses=t.split(/[.;\n,]| puis | ainsi que | et (?=(?:un|une|des|deux|trois|quatre|cinq|six|le|la|les|l|\d+)\s)/).map(x=>(x||"").trim()).filter(Boolean);
+  const items=[]; const excluded=new Set();
+  const qty=(c,word)=>{ const m=c.match(new RegExp("(\\d+|un|une|deux|trois|quatre|cinq|six|sept|huit)\\s+(?:\\w+\\s+)?"+word)); return m?(NUMW[m[1]]||+m[1]||1):null; };
+  for(const c of clauses){
+    const found=[];
+    const negated=word=>new RegExp("\\b(pas de|pas d|sans|aucun|aucune|ni)\\s+(?:\\w+\\s+)?(?:"+word+")").test(c);
+    const WORD={lit:"lits?",chevet:"(?:tables? de (?:chevet|nuit)|chevets?)",armoire:"(?:armoires?|penderies?|dressing|placards?)",commode:"commodes?",bureau:"bureaux?",billy:"(?:bibliotheques?|billy)",kallax:"(?:etageres?|kallax|rangements?)",canape:"(?:canapes?|sofas?)",fauteuil:"fauteuils?",tableBasse:"tables? basses?",meubleTV:"(?:meubles? (?:tv|tele)|tv|tele|television)",table:"tables?",chaise:"chaises?"};
+    const push=(key,extra={})=>{ const wk=/^lit/.test(key)?"lit":key; if(WORD[wk]&&negated(WORD[wk])){ excluded.add(key); return; } found.push({key,...extra}); };
+    let m;
+    if(/\blits?\b/.test(c) && !/canape.lit/.test(c)){
+      let key="lit";
+      if(/\b160\b|queen/.test(c)) key="lit160"; else if(/\b140\b/.test(c)) key="lit140"; else if(/\b90\b|une place|simple|enfant|1 place/.test(c)) key="lit90"; else if(/double|deux places|2 places/.test(c)) key="litDouble";
+      push(key,{n:qty(c,"lits?")||1});
+    }
+    if((m=c.match(/(table[s]? de (?:chevet|nuit)|chevets?)/))) push("chevet",{n:qty(c,"(?:tables? de (?:chevet|nuit)|chevets?)")||null});
+    if(/armoire|penderie|dressing|placard/.test(c)) push("armoire",{n:qty(c,"(?:armoires?|penderies?)")||1});
+    if(/commode/.test(c)) push("commode",{n:qty(c,"commodes?")||1});
+    if(/\bbureau\b/.test(c) && !/(chaise|fauteuil) de bureau/.test(c)) push("bureau");
+    if(/bibliotheque|billy/.test(c)) push("billy",{n:qty(c,"(?:bibliotheques?|billy)")||1});
+    if(/etagere|kallax|rangement/.test(c) && !/bibliotheque/.test(c)) push("kallax",{n:qty(c,"(?:etageres?|kallax|rangements?)")||1});
+    if(/canape|sofa/.test(c)) push("canape");
+    if(/fauteuil/.test(c) && !/fauteuil de bureau/.test(c)) push("fauteuil",{n:qty(c,"fauteuils?")||1});
+    if(/table basse/.test(c)) push("tableBasse");
+    if(/meuble (tv|tele)|\btv\b|\btele\b|television/.test(c)) push("meubleTV");
+    if(/\btable\b/.test(c) && !/table basse|table de (chevet|nuit)/.test(c)){
+      const seats = (m=c.match(/(\d+|deux|trois|quatre|cinq|six|sept|huit)\s+(?:personnes|couverts|places|chaises)/))? (NUMW[m[1]]||+m[1]) : null;
+      push("table",{seats});
+    }
+    if(/\bchaises?\b/.test(c) && !/\btable\b/.test(c) && !/chaise de bureau/.test(c)) push("chaise",{n:qty(c,"chaises?")||4});
+    // meuble hors catalogue avec ses dimensions : « un piano de 150 x 60 », « un buffet 160x45x90 »
+    if((m=c.match(/\b(?:un|une|le|la|mon|ma)\s+([a-z]+(?:\s(?!de\b)[a-z]+)?)\s+(?:de\s+)?(\d{2,3})\s*(?:x|par|sur|\*)\s*(\d{2,3})(?:\s*(?:x|par|sur|\*)\s*(\d{2,3}))?/))){
+      const nm=m[1].trim(); const known=Object.values(WORD).some(wr=>new RegExp("^(?:"+wr+")").test(nm));
+      if(!known) found.push({key:"custom",name:nm.charAt(0).toUpperCase()+nm.slice(1),w:+m[2],d:+m[3],h:m[4]?+m[4]:80});
+    }
+    // consignes de la proposition
+    const cons={};
+    if((m=c.match(/\bmur\s+([a-h])\b/))) cons.wall=m[1].toUpperCase();
+    if(/sous (la |une )?fenetre/.test(c)) cons.under=true;
+    if(/(pres|proche|a cote|cote|le long|a proximite)\s+(de\s+)?(la |l )?porte/.test(c)) cons.near="porte";
+    if(/(pres|proche|a cote|cote|a proximite)\s+(de\s+)?(la |l )?fenetre/.test(c)) cons.near="fenetre";
+    if(/loin (de\s+)?(la |l )?porte/.test(c)) cons.away="porte";
+    if(/loin (de\s+)?(la |l )?fenetre/.test(c)) cons.away="fenetre";
+    if(/\bcoin\b|\bangle\b/.test(c)) cons.corner=true;
+    if(/(au )?centre|au milieu|centre/.test(c)) cons.center=true;
+    if((m=c.match(/face (a|au|aux) (la |l )?(fenetre|porte|tele|tv|canape|lit|bureau)/))){ const tg={fenetre:"fenetre",porte:"porte",tele:"meubleTV",tv:"meubleTV",canape:"canape",lit:"lit",bureau:"bureau"}[m[3]]; cons.facing=tg; }
+    if(/(sans|pas de|aucun|aucune)\s+(table de )?(chevet|nuit)/.test(c)) { const b=[...items,...found].reverse().find(x=>/^lit/.test(x.key)); if(b) b.chevets=0; excluded.delete("chevet"); }
+    if(found.length){ found.forEach((f,i)=>{ if(i===0) Object.assign(f,cons); items.push(f); }); }
+    else if(items.length && Object.keys(cons).length) Object.assign(items[items.length-1],cons);
+  }
+  // fusion des doublons (même meuble cité deux fois)
+  const out=[];
+  for(const it of items){ const prev=out.find(o=>o.key===it.key && it.key!=="custom"); if(prev){ for(const k in it) if(it[k]!=null && k!=="key" && k!=="n") prev[k]=it[k]; } else out.push(it); }
+  return {items:out.filter(i=>!excluded.has(i.key)), excluded:[...excluded]};
+}
+function validateProgram(p){
+  const items=[];
+  for(const r of (Array.isArray(p?.items)?p.items:[])){
+    if(!r||!PROG_KEYS.includes(r.key)) continue;
+    const o={key:r.key};
+    if(r.n!=null && isFinite(+r.n)) o.n=Math.max(1,Math.min(6,Math.round(+r.n)));
+    if(typeof r.wall==="string" && /^[A-Za-z]$/.test(r.wall)) o.wall=r.wall.toUpperCase();
+    for(const b of ["under","corner","center"]) if(r[b]===true) o[b]=true;
+    for(const k of ["near","away","facing"]) if(typeof r[k]==="string" && (r[k]==="porte"||r[k]==="fenetre"||PROG_KEYS.includes(r[k]))) o[k]=r[k];
+    if(r.seats!=null && isFinite(+r.seats)) o.seats=Math.max(2,Math.min(8,Math.round(+r.seats)));
+    if(r.chevets!=null && isFinite(+r.chevets)) o.chevets=Math.max(0,Math.min(2,Math.round(+r.chevets)));
+    if(r.key==="custom"){ o.name=String(r.name||"Meuble").slice(0,40); for(const k of ["w","d","h"]) if(isFinite(+r[k])&&+r[k]>0) o[k]=Math.min(600,+r[k]); }
+    items.push(o);
+  }
+  return {items, comment: typeof p?.comment==="string"?p.comment.slice(0,300):""};
+}
+function describeProgram(p){
+  const map={porte:"la porte",fenetre:"la fenêtre"};
+  return p.items.map(r=>{
+    const bits=[]; const n=r.n>1?r.n+" × ":"";
+    if(r.wall) bits.push("contre le mur "+r.wall);
+    if(r.under) bits.push("sous la fenêtre");
+    if(r.corner) bits.push("dans un coin");
+    if(r.center) bits.push("centré");
+    if(r.near) bits.push("près de "+(map[r.near]||labelOf({key:r.near})));
+    if(r.away) bits.push("loin de "+(map[r.away]||labelOf({key:r.away})));
+    if(r.facing) bits.push("face à "+(map[r.facing]||labelOf({key:r.facing})));
+    if(r.key==="table" && r.seats) bits.push(r.seats+" couverts");
+    if(r.chevets===0) bits.push("sans chevet");
+    if(r.key==="custom" && r.w) bits.push(`${r.w}×${r.d} cm`);
+    return n+labelOf(r)+(bits.length?" ("+bits.join(", ")+")":"");
+  });
+}
+
+/* ================= État & stockage ================= */
+const KEY="planpiece.v1";
+function defaultRoom(){
+  return {id:uid(),name:"Chambre",height:250,thick:20,usage:"chambre",
+    walls:[{len:400,ang:90},{len:320,ang:90},{len:400,ang:90},{len:320,ang:90}],
+    openings:[{id:uid(),type:"door",wall:3,pos:30,width:83,hinge:"start",swing:"in"},
+              {id:uid(),type:"window",wall:1,pos:100,width:120,sill:90}],
+    furniture:[]};
+}
+let S;
+try{ S=JSON.parse(localStorage.getItem(KEY)||"null"); }catch(e){ S=null; }
+if(!S||!Array.isArray(S.rooms)||!S.rooms.length){ const r=defaultRoom(); S={rooms:[r],cur:r.id}; }
+let props=[], propIdx=0, selId=null;
+const room=()=>S.rooms.find(r=>r.id===S.cur)||S.rooms[0];
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+
+/* ================= Rendu du plan ================= */
+const svg=document.getElementById("plan");
+let view=null;
+const INK="#22313B", DIM="#0F5E73", SOFT="#8A9AA3", FURN="#E6EDF0", FSTROKE="#4B6470", BAD="#B4400C";
+
+function dimLine(A,B,n,off,txt,fs,cls){
+  // ligne de cote parallèle à AB, décalée de off selon -n (vers l'extérieur)
+  const a=V.sub(A,V.mul(n,off)), b=V.sub(B,V.mul(n,off));
+  const L=V.dist(A,B); if(L<1) return "";
+  const u=V.mul(V.sub(B,A),1/L);
+  const tick=(p)=>{const t1=V.add(p,V.add(V.mul(u,-fs*.35),V.mul(n,-fs*.35))), t2=V.add(p,V.add(V.mul(u,fs*.35),V.mul(n,fs*.35)));return `<line x1="${t1[0]}" y1="${t1[1]}" x2="${t2[0]}" y2="${t2[1]}" stroke="${DIM}" stroke-width="${fs*.09}"/>`;};
+  let ang=Math.atan2(u[1],u[0])*180/Math.PI; if(ang>90.5||ang<-89.5) ang+=180;
+  const m=V.sub(V.mul(V.add(a,b),.5),V.mul(n,fs*.45));
+  const ext=(P,p)=>{const s=V.sub(P,V.mul(n,fs*0.3));const e=V.sub(p,V.mul(n,fs*.35));return `<line x1="${s[0]}" y1="${s[1]}" x2="${e[0]}" y2="${e[1]}" stroke="${DIM}" stroke-width="${fs*.045}"/>`;};
+  const small = L < fs*2.2;
+  return `<g class="${cls||""}">${ext(A,a)}${ext(B,b)}<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${DIM}" stroke-width="${fs*.06}"/>${tick(a)}${tick(b)}<text x="${m[0]}" y="${m[1]}" font-size="${small?fs*.75:fs}" fill="${DIM}" text-anchor="middle" dominant-baseline="auto" font-family="IBM Plex Sans Condensed, Arial Narrow, sans-serif" font-weight="500" transform="rotate(${ang} ${m[0]} ${m[1]})">${txt}</text></g>`;
+}
+
+function furnitureSVG(f,fs,bad,sel){
+  const s=specOf(f); if(!s) return "";
+  const cs=corners(f); const pts=cs.map(p=>p.join(",")).join(" ");
+  const stroke=bad?BAD:(sel?DIM:FSTROKE), sw=sel?fs*.14:fs*.07;
+  let deco="";
+  const L=(x1,y1,x2,y2,extra="")=>{const p=rel(f,x1,y1),q=rel(f,x2,y2);return `<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="${FSTROKE}" stroke-width="${fs*.05}" ${extra}/>`;};
+  const R=(x,y,w,d,fill="#fff")=>{const c={cx:0,cy:0,w,d,a:f.a};[c.cx,c.cy]=rel(f,x,y);return `<polygon points="${corners(c).map(p=>p.join(",")).join(" ")}" fill="${fill}" stroke="${FSTROKE}" stroke-width="${fs*.05}"/>`;};
+  const k=s.kind;
+  if(k==="bed"){
+    const pw = s.single? f.w-24 : (f.w-30)/2;
+    if(s.single) deco+=R(0,-f.d/2+24,pw,26); else {deco+=R(-pw/2-5,-f.d/2+24,pw,26)+R(pw/2+5,-f.d/2+24,pw,26);}
+    deco+=L(-f.w/2+4,-f.d/2+48,f.w/2-4,-f.d/2+48)+L(-f.w/2+4,-f.d/2+62,f.w/2-4,-f.d/2+62,'stroke-opacity=".45"');
+    deco+=R(0,-f.d/2+4,f.w,8,FSTROKE);
+  } else if(k==="sofa"){
+    deco+=R(0,-f.d/2+10,f.w,20,"#D2DCE0")+R(-f.w/2+10,8,20,f.d-20,"#D2DCE0")+R(f.w/2-10,8,20,f.d-20,"#D2DCE0");
+    deco+=L(0,-f.d/2+20,0,f.d/2);
+  } else if(k==="armchair"){
+    deco+=R(0,-f.d/2+12,f.w-8,22,"#D2DCE0");
+  } else if(k==="wardrobe"){
+    deco+=L(0,-f.d/2,0,f.d/2)+L(-f.w/2,-f.d/2,f.w/2,f.d/2,'stroke-dasharray="4 4"')+L(f.w/2,-f.d/2,-f.w/2,f.d/2,'stroke-dasharray="4 4"');
+  } else if(k==="shelf"){
+    deco+=L(-f.w/2,-f.d/2+f.d*.5,f.w/2,-f.d/2+f.d*.5,'stroke-opacity=".6"');
+  } else if(k==="chair"){
+    deco+=R(0,-f.d/2+5,f.w-6,9,"#D2DCE0");
+  } else if(k==="desk"||k==="chest"||k==="tv"){
+    deco+=L(-f.w/2,-f.d/2+3,f.w/2,-f.d/2+3,'stroke-opacity=".5"');
+  }
+  // libellé
+  let label="";
+  const lab=s.short||s.name;
+  const tf=Math.min(fs*.82, f.w/ (lab.length*0.5+1), f.d*0.42);
+  const showLab = tf>fs*0.42 && k!=="chair" && k!=="small";
+  if(showLab){
+    let ang=f.a*180/Math.PI; ang=((ang%360)+360)%360; if(ang>90.5&&ang<269.5) ang+=180;
+    const ly = k==="bed"? f.d*0.12 : (k==="sofa"?8:0);
+    const p=rel(f,0,ly);
+    label=`<text x="${p[0]}" y="${p[1]}" font-size="${tf}" fill="${INK}" text-anchor="middle" dominant-baseline="middle" font-family="IBM Plex Sans Condensed, Arial Narrow, sans-serif" transform="rotate(${ang} ${p[0]} ${p[1]})">${esc(lab)}</text>`;
+  }
+  return `<g data-fid="${f.id}" style="cursor:grab"><polygon points="${pts}" fill="${FURN}" stroke="${stroke}" stroke-width="${sw}"/>${deco}${label}</g>`;
+}
+
+function distancesSVG(f,G,fs){
+  const [ux,fy]=axes(f.a); let out="";
+  const dirs=[[ux,f.w/2],[V.mul(ux,-1),f.w/2],[fy,f.d/2],[V.mul(fy,-1),f.d/2]];
+  for(const [dir,h] of dirs){
+    const p=[f.cx+dir[0]*h,f.cy+dir[1]*h];
+    const t=rayToWall(G,p,dir); if(!isFinite(t)||t<1) continue;
+    const q=V.add(p,V.mul(dir,t)), m=V.mul(V.add(p,q),.5);
+    let ang=Math.atan2(dir[1],dir[0])*180/Math.PI; if(ang>90.5||ang<-89.5) ang+=180;
+    out+=`<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="${BAD}" stroke-width="${fs*.07}" stroke-dasharray="${fs*.3} ${fs*.25}"/>`;
+    out+=`<text x="${m[0]}" y="${m[1]-fs*.25}" font-size="${fs*.85}" fill="${BAD}" text-anchor="middle" font-family="IBM Plex Sans Condensed, Arial Narrow, sans-serif" font-weight="600" paint-order="stroke" stroke="#fff" stroke-width="${fs*.25}" transform="rotate(${ang} ${m[0]} ${m[1]})">${fmtCm(t)}</text>`;
+  }
+  return out;
+}
+
+function render(fit){
+  const R=room(), G=buildGeom(R); const t=+R.thick||20;
+  const diag=Math.hypot(G.bbox.x1-G.bbox.x0,G.bbox.y1-G.bbox.y0)||400;
+  const fs=Math.max(9,Math.min(28,diag/34));
+  const outer=outerPoly(G,t);
+  let s="";
+  // murs (anneau entre intérieur et extérieur)
+  const pth=p=>"M"+p.map(q=>q.join(",")).join("L")+"Z";
+  s+=`<rect x="-100000" y="-100000" width="200000" height="200000" fill="#fff"/>`;
+  s+=`<path d="${pth(outer)} ${pth([...G.pts].reverse())}" fill="#3A4A54" fill-rule="evenodd"/>`;
+  s+=`<path d="${pth(G.pts)}" fill="#FAFBFB" stroke="${INK}" stroke-width="${fs*.08}"/>`;
+  // ouvertures
+  for(const op of R.openings){
+    const g=opGeom(op,G); if(!g) continue; const w=g.w;
+    const so=V.sub(g.s,V.mul(w.n,t)), eo=V.sub(g.e,V.mul(w.n,t));
+    s+=`<polygon points="${[g.s,g.e,eo,so].map(p=>p.join(",")).join(" ")}" fill="#fff" stroke="none"/>`;
+    s+=`<line x1="${g.s[0]}" y1="${g.s[1]}" x2="${so[0]}" y2="${so[1]}" stroke="${INK}" stroke-width="${fs*.07}"/><line x1="${g.e[0]}" y1="${g.e[1]}" x2="${eo[0]}" y2="${eo[1]}" stroke="${INK}" stroke-width="${fs*.07}"/>`;
+    if(op.type==="opening"){ /* passage sans vantail */ }
+    else if(op.type==="window"){
+      for(const k of [0.3,0.7]){const a=V.sub(g.s,V.mul(w.n,t*k)),b=V.sub(g.e,V.mul(w.n,t*k)); s+=`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${INK}" stroke-width="${fs*.06}"/>`;}
+    } else {
+      const inward=op.swing!=="out"; const nn=inward?w.n:V.mul(w.n,-1);
+      const base = inward? [g.s,g.e] : [so,eo];
+      const leaves = op.type==="french" ? [[base[0],g.width/2,1],[base[1],g.width/2,-1]] :
+        [[op.hinge==="end"?base[1]:base[0], g.width, op.hinge==="end"?-1:1]];
+      for(const [H,lw,dirSign] of leaves){
+        const tip=V.add(H,V.mul(nn,lw)), closed=V.add(H,V.mul(w.u,lw*dirSign));
+        const sweep = (V.cross(V.sub(tip,H),V.sub(closed,H))>0)?1:0;
+        s+=`<line x1="${H[0]}" y1="${H[1]}" x2="${tip[0]}" y2="${tip[1]}" stroke="${INK}" stroke-width="${fs*.08}"/>`;
+        s+=`<path d="M${tip[0]},${tip[1]} A${lw},${lw} 0 0 ${sweep} ${closed[0]},${closed[1]}" fill="none" stroke="${SOFT}" stroke-width="${fs*.05}" stroke-dasharray="${fs*.25} ${fs*.2}"/>`;
+      }
+    }
+  }
+  // cotes des murs
+  G.walls.forEach((w,i)=>{
+    const ops=R.openings.filter(o=>+o.wall===i).map(o=>({o,g:opGeom(o,G)})).filter(x=>x.g).sort((a,b)=>a.g.pos-b.g.pos);
+    const offTot = ops.length? t+fs*3.6 : t+fs*1.6;
+    s+=dimLine(w.A,w.B,w.n,offTot,fmtCm(w.len),fs);
+    if(ops.length){
+      let x=0; const marks=[0];
+      for(const {g} of ops){ marks.push(g.pos, g.pos+g.width); }
+      marks.push(w.len);
+      const ms=[...new Set(marks.map(m=>Math.round(Math.max(0,Math.min(w.len,m))*10)/10))].sort((a,b)=>a-b);
+      for(let k=0;k<ms.length-1;k++){
+        const a=V.add(w.A,V.mul(w.u,ms[k])), b=V.add(w.A,V.mul(w.u,ms[k+1]));
+        if(ms[k+1]-ms[k]>0.5) s+=dimLine(a,b,w.n,t+fs*1.6,fmtCm(ms[k+1]-ms[k]),fs*.85);
+      }
+    }
+    // lettre du mur (côté intérieur) et numéro de coin
+    const mid=V.add(V.mul(V.add(w.A,w.B),.5),V.mul(w.n,fs*1.3));
+    s+=`<text x="${mid[0]}" y="${mid[1]}" font-size="${fs*.95}" fill="${SOFT}" text-anchor="middle" dominant-baseline="middle" font-family="IBM Plex Sans Condensed, Arial Narrow, sans-serif" font-weight="600">${LET(i)}</text>`;
+    const prev=G.walls[(i-1+G.walls.length)%G.walls.length];
+    const bis=V.add(w.n,prev.n); const bl=V.len(bis)||1;
+    const cp=V.add(w.A,V.mul(bis,fs*1.1/bl));
+    s+=`<circle cx="${cp[0]}" cy="${cp[1]}" r="${fs*.55}" fill="#fff" stroke="${SOFT}" stroke-width="${fs*.05}"/><text x="${cp[0]}" y="${cp[1]}" font-size="${fs*.62}" fill="${SOFT}" text-anchor="middle" dominant-baseline="central" font-family="IBM Plex Sans Condensed, Arial Narrow, sans-serif">${i+1}</text>`;
+  });
+  // meubles
+  const conf=checkAll(R,G);
+  const sorted=[...R.furniture].sort((a,b)=>(a.parent?1:0)-(b.parent?1:0));
+  for(const f of sorted) s+=furnitureSVG(f,fs,conf[f.id]&&conf[f.id].length,f.id===selId);
+  const sel=R.furniture.find(f=>f.id===selId);
+  if(sel) s+=distancesSVG(sel,G,fs);
+  // échelle
+  const sb=100, sx=G.bbox.x0, sy=G.bbox.y1+t+fs*4.8;
+  s+=`<g><line x1="${sx}" y1="${sy}" x2="${sx+sb}" y2="${sy}" stroke="${INK}" stroke-width="${fs*.12}"/><line x1="${sx}" y1="${sy-fs*.3}" x2="${sx}" y2="${sy+fs*.3}" stroke="${INK}" stroke-width="${fs*.08}"/><line x1="${sx+sb}" y1="${sy-fs*.3}" x2="${sx+sb}" y2="${sy+fs*.3}" stroke="${INK}" stroke-width="${fs*.08}"/><text x="${sx+sb+fs*.5}" y="${sy}" font-size="${fs*.75}" fill="${INK}" dominant-baseline="middle" font-family="IBM Plex Sans Condensed, Arial Narrow, sans-serif">1 m — cotes en cm</text></g>`;
+  svg.innerHTML=s;
+  svg._fs=fs; svg._G=G;
+  if(fit||!view) fitView(G,t,fs);
+  applyView();
+  document.getElementById("surface").textContent=`${(G.area/10000).toLocaleString("fr-FR",{maximumFractionDigits:2})} m² · périmètre ${(G.perim/100).toLocaleString("fr-FR",{maximumFractionDigits:2})} m`;
+  document.getElementById("title").textContent=R.name||"Plan Pièce";
+}
+function fitView(G,t,fs){
+  const m=t+fs*5;
+  view={x:G.bbox.x0-m,y:G.bbox.y0-m,w:(G.bbox.x1-G.bbox.x0)+2*m,h:(G.bbox.y1-G.bbox.y0)+2*m+fs*2};
+  const r=svg.getBoundingClientRect(); const ar=(r.width||1)/(r.height||1);
+  if(view.w/view.h<ar){const nw=view.h*ar; view.x-=(nw-view.w)/2; view.w=nw;} else {const nh=view.w/ar; view.y-=(nh-view.h)/2; view.h=nh;}
+}
+function applyView(){ svg.setAttribute("viewBox",`${view.x} ${view.y} ${view.w} ${view.h}`); }
+function zoom(k,cx,cy){
+  if(cx==null){cx=view.x+view.w/2;cy=view.y+view.h/2;}
+  view.x=cx-(cx-view.x)/k; view.y=cy-(cy-view.y)/k; view.w/=k; view.h/=k; applyView();
+}
+document.getElementById("zin").onclick=()=>zoom(1.3);
+document.getElementById("zout").onclick=()=>zoom(1/1.3);
+document.getElementById("zfit").onclick=()=>render(true);
+
+/* ================= Interaction sur le plan ================= */
+function svgPt(e){const p=svg.createSVGPoint(); p.x=e.clientX; p.y=e.clientY; const m=svg.getScreenCTM().inverse(); const q=p.matrixTransform(m); return [q.x,q.y];}
+const pointers=new Map(); let drag=null, pinch=null, moved=false;
+svg.addEventListener("pointerdown",e=>{
+  svg.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); moved=false;
+  if(pointers.size===2){ const [a,b]=[...pointers.values()]; pinch={d:Math.hypot(a.x-b.x,a.y-b.y)}; drag=null; return; }
+  const g=e.target.closest("[data-fid]");
+  const p=svgPt(e);
+  if(g){ const f=room().furniture.find(x=>x.id===g.dataset.fid); if(f){ drag={mode:"f",f,start:p,cx:f.cx,cy:f.cy,kids:room().furniture.filter(k=>k.parent===f.id).map(k=>({k,cx:k.cx,cy:k.cy}))}; return; } }
+  drag={mode:"pan",sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y};
+});
+svg.addEventListener("pointermove",e=>{
+  if(!pointers.has(e.pointerId)) return;
+  const prev=pointers.get(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch && pointers.size===2){
+    const [a,b]=[...pointers.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y);
+    const mid={clientX:(a.x+b.x)/2,clientY:(a.y+b.y)/2}; const c=svgPt(mid);
+    zoom(d/pinch.d,c[0],c[1]); pinch.d=d; moved=true; return;
+  }
+  if(!drag) return;
+  if(Math.hypot(e.clientX-prev.x,e.clientY-prev.y)>0) {}
+  if(drag.mode==="pan"){
+    const k=view.w/svg.clientWidth; const dx=e.clientX-drag.sx, dy=e.clientY-drag.sy;
+    if(Math.abs(dx)+Math.abs(dy)>4) moved=true;
+    view.x=drag.vx-dx*k; view.y=drag.vy-dy*k; applyView();
+  } else {
+    const p=svgPt(e); const dx=p[0]-drag.start[0], dy=p[1]-drag.start[1];
+    if(!moved && Math.hypot(dx,dy)< (svg._fs||12)*0.4) return;
+    moved=true; selId=drag.f.id;
+    drag.f.cx=r1(drag.cx+dx); drag.f.cy=r1(drag.cy+dy);
+    snapToWalls(drag.f);
+    const ddx=drag.f.cx-drag.cx, ddy=drag.f.cy-drag.cy;
+    drag.kids.forEach(k=>{k.k.cx=r1(k.cx+ddx); k.k.cy=r1(k.cy+ddy);});
+    render(false);
+  }
+});
+function endPtr(e){
+  const wasDrag=drag; pointers.delete(e.pointerId);
+  if(pointers.size<2) pinch=null;
+  if(pointers.size===0){
+    if(!moved){
+      selId = (wasDrag&&wasDrag.mode==="f") ? wasDrag.f.id : null;
+      if(selId) showTab("amen");
+      render(false); renderSel();
+      if(selId) setTimeout(()=>document.getElementById("selPanel").scrollIntoView({behavior:"smooth",block:"nearest"}),30);
+    } else if(wasDrag&&wasDrag.mode==="f"){ save(); renderSel(); renderList(); document.getElementById("layoutMsg").innerHTML=""; }
+    drag=null;
+  }
+}
+svg.addEventListener("pointerup",endPtr); svg.addEventListener("pointercancel",endPtr);
+svg.addEventListener("wheel",e=>{e.preventDefault(); const c=svgPt(e); zoom(e.deltaY<0?1.12:1/1.12,c[0],c[1]);},{passive:false});
+
+function snapToWalls(f){
+  const G=buildGeom(room()); const [ux,fy]=axes(f.a);
+  for(const [dir,h] of [[ux,f.w/2],[V.mul(ux,-1),f.w/2],[fy,f.d/2],[V.mul(fy,-1),f.d/2]]){
+    const p=[f.cx+dir[0]*h,f.cy+dir[1]*h];
+    // seulement les murs parallèles à ce côté
+    let best=Infinity;
+    for(const w of G.walls){
+      if(Math.abs(V.dot(w.n,dir))<0.995) continue;
+      const den=V.cross(dir,w.u); if(Math.abs(den)<1e-9) continue;
+      const ap=V.sub(w.A,p); const t=V.cross(ap,w.u)/den, s=V.cross(ap,dir)/den;
+      if(t>-12 && s>=-h && s<=w.len+h && Math.abs(t)<Math.abs(best)) best=t;
+    }
+    if(Math.abs(best)<10){ f.cx=r1(f.cx+dir[0]*(best-0.5)); f.cy=r1(f.cy+dir[1]*(best-0.5)); }
+  }
+}
+
+/* ================= Onglets ================= */
+function showTab(k){
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===k?"true":"false"));
+  document.querySelectorAll("main>section").forEach(s=>s.classList.toggle("on",s.id==="tab-"+k));
+}
+document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{showTab(b.dataset.tab); if(b.dataset.tab==="liste") renderList();});
+
+/* ================= Pièce : murs ================= */
+function renderRoomSel(){
+  const sel=document.getElementById("roomsel");
+  sel.innerHTML=S.rooms.map(r=>`<option value="${r.id}" ${r.id===S.cur?"selected":""}>${esc(r.name||"Sans nom")}</option>`).join("");
+}
+document.getElementById("roomsel").onchange=e=>{S.cur=e.target.value; selId=null; props=[]; save(); renderAll(true);};
+function renderWalls(){
+  const R=room(), G=buildGeom(R);
+  const box=document.getElementById("walls");
+  box.innerHTML=R.walls.map((w,i)=>{
+    const custom=customAng.has(i)||![90,270].includes(+w.ang);
+    return `<div class="wallrow"><div class="tag">${LET(i)}</div>
+      <label class="field">Longueur coin ${i+1}→${(i+1)%R.walls.length+1} (cm)<input type="number" inputmode="decimal" data-w="${i}" data-k="len" value="${w.len}"></label>
+      ${custom?`<label class="field">Angle au coin ${(i+1)%R.walls.length+1} (°)<input type="number" inputmode="decimal" data-w="${i}" data-k="ang" value="${w.ang}" min="20" max="340"></label>`:
+      `<label class="field">Angle au coin ${(i+1)%R.walls.length+1}<select data-w="${i}" data-k="ang">
+        <option value="90" ${+w.ang===90?"selected":""}>90° (coin normal)</option>
+        <option value="270" ${+w.ang===270?"selected":""}>270° (coin rentrant)</option>
+        <option value="other">Autre angle…</option></select></label>`}
+      <button class="iconbtn" data-delw="${i}" aria-label="Supprimer le mur ${LET(i)}" ${R.walls.length<=3?"disabled":""}>×</button></div>`;
+  }).join("");
+  box.querySelectorAll("input[data-w]").forEach(inp=>inp.onchange=()=>{
+    const i=+inp.dataset.w, v=parseFloat(inp.value.replace(",","."));
+    if(inp.dataset.k==="len"){ if(v>0){R.walls[i].len=r1(v);commitGeom();} }
+    else { if(v>=20&&v<=340){R.walls[i].ang=r1(v); if(v===90||v===270) customAng.delete(i); commitGeom();} else { toast("L'angle doit être compris entre 20° et 340°."); renderWalls(); } }
+  });
+  box.querySelectorAll("select[data-w]").forEach(sel=>sel.onchange=()=>{
+    const i=+sel.dataset.w;
+    if(sel.value==="other"){ customAng.add(i); renderWalls(); const inp=box.querySelector(`input[data-w="${i}"][data-k="ang"]`); if(inp){inp.focus(); inp.select();} return; }
+    R.walls[i].ang=+sel.value; commitGeom();
+  });
+  box.querySelectorAll("[data-delw]").forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.delw; R.walls.splice(i,1);
+    R.openings=R.openings.filter(o=>+o.wall!==i).map(o=>({...o,wall:+o.wall>i?+o.wall-1:+o.wall}));
+    commitGeom();
+  });
+  const c=document.getElementById("closure");
+  const sumAng=R.walls.reduce((s,w)=>s+(+w.ang||90),0), expected=(R.walls.length-2)*180;
+  if(G.closeErr<=1 && Math.abs(sumAng-expected)<0.5) c.innerHTML=`<div class="status ok">Contour fermé. Surface ${(G.area/10000).toLocaleString("fr-FR",{maximumFractionDigits:2})} m².</div>`;
+  else c.innerHTML=`<div class="status warn">Le contour ne se referme pas : écart de ${fmtCm(G.closeErr)} cm au coin 1${Math.abs(sumAng-expected)>=0.5?`, somme des angles ${r1(sumAng)}° au lieu de ${expected}°`:""}. Vérifiez une mesure, ou touchez « Fermer le contour » pour recalculer le dernier mur.</div>`;
+}
+const customAng=new Set();
+function commitGeom(){ save(); props=[]; renderWalls(); renderOps(); render(true); renderSel(); }
+document.getElementById("addWall").onclick=()=>{room().walls.push({len:100,ang:90}); commitGeom();};
+document.getElementById("closeWall").onclick=()=>{
+  const R=room(); const n=R.walls.length; if(n<3) return;
+  // on garde les n-1 premiers murs et les n-2 premiers angles, on calcule le dernier mur et les deux derniers angles
+  const pts=[[0,0]]; let h=0;
+  for(let i=0;i<n-1;i++){const L=+R.walls[i].len; const p=pts[pts.length-1]; pts.push([p[0]+L*Math.cos(h),p[1]+L*Math.sin(h)]); if(i<n-2) h+=(180-(+R.walls[i].ang))*Math.PI/180;}
+  const P=pts[n-1]; const L=V.dist(P,[0,0]); if(L<1){toast("Le dernier mur aurait une longueur nulle.");return;}
+  const hIn=h, hLast=Math.atan2(-P[1],-P[0]);
+  const norm=a=>{a=a%(2*Math.PI); if(a<=-Math.PI)a+=2*Math.PI; if(a>Math.PI)a-=2*Math.PI; return a;};
+  const turn1=norm(hLast-hIn), turn2=norm(0-hLast);
+  R.walls[n-2].ang=r1(180-turn1*180/Math.PI); R.walls[n-1].len=r1(L); R.walls[n-1].ang=r1(180-turn2*180/Math.PI);
+  commitGeom(); toast(`Dernier mur : ${fmtCm(L)} cm`);
+};
+document.getElementById("mkRect").onclick=()=>{
+  const L=+qL.value,W=+qW.value; if(!(L>0&&W>0)) return;
+  const R=room(); R.walls=[{len:L,ang:90},{len:W,ang:90},{len:L,ang:90},{len:W,ang:90}];
+  R.openings=R.openings.filter(o=>+o.wall<4); R.furniture=[]; commitGeom();
+};
+document.getElementById("mkL").onclick=()=>{
+  const L=+qL.value,W=+qW.value; if(!(L>0&&W>0)) return;
+  const a=Math.round(L*0.55), b=Math.round(W*0.5);
+  const R=room(); R.walls=[{len:L,ang:90},{len:b,ang:90},{len:L-a,ang:270},{len:W-b,ang:90},{len:a,ang:90},{len:W,ang:90}];
+  R.openings=R.openings.filter(o=>+o.wall<6); R.furniture=[]; commitGeom();
+  toast("Forme en L créée : ajustez chaque mur à vos mesures.");
+};
+const qL=document.getElementById("qL"), qW=document.getElementById("qW");
+const rname=document.getElementById("rname"), rheight=document.getElementById("rheight"), rthick=document.getElementById("rthick");
+rname.onchange=()=>{room().name=rname.value.trim()||"Pièce"; save(); renderRoomSel(); render(false);};
+rheight.onchange=()=>{const v=+rheight.value; if(v>0){room().height=v; save(); props=[];}};
+rthick.onchange=()=>{const v=+rthick.value; if(v>=5&&v<=60){room().thick=v; save(); render(true);}};
+
+/* ================= Ouvertures ================= */
+const OPN={door:"Porte",window:"Fenêtre",french:"Porte-fenêtre",opening:"Passage"};
+function renderOps(){
+  const R=room(), G=buildGeom(R);
+  const box=document.getElementById("ops");
+  if(!R.openings.length){ box.innerHTML=`<p class="hint">Aucune ouverture. Ajoutez au moins la porte d'entrée : l'aménagement laisse son débattement libre.</p>`; return; }
+  const wallOpts=(sel)=>G.walls.map((w,i)=>`<option value="${i}" ${+sel===i?"selected":""}>Mur ${LET(i)} (${fmtCm(w.len)} cm)</option>`).join("");
+  box.innerHTML=R.openings.map((o,k)=>{
+    const g=opGeom(o,G); const w=G.walls[o.wall];
+    const over = g && w && (g.pos+g.width>w.len+0.5);
+    return `<div class="item ${over?"bad":""}">
+      <div class="row"><span class="fname flex1">${OPN[o.type]} ${k+1}</span><button class="iconbtn" data-delop="${o.id}" aria-label="Supprimer">×</button></div>
+      <div class="grid3" style="margin-top:6px">
+        <label class="field">Mur<select data-op="${o.id}" data-k="wall">${wallOpts(o.wall)}</select></label>
+        <label class="field">Depuis coin ${(+o.wall)+1} (cm)<input type="number" inputmode="decimal" data-op="${o.id}" data-k="pos" value="${o.pos}"></label>
+        <label class="field">Largeur (cm)<input type="number" inputmode="decimal" data-op="${o.id}" data-k="width" value="${o.width}"></label>
+      </div>
+      ${o.type==="window"?`<div class="grid3" style="margin-top:6px"><label class="field">Allège (cm)<input type="number" inputmode="decimal" data-op="${o.id}" data-k="sill" value="${o.sill??90}"></label></div>`:
+      `<div class="grid2" style="margin-top:6px">
+        ${o.type==="door"?`<label class="field">Charnières<select data-op="${o.id}" data-k="hinge"><option value="start" ${o.hinge!=="end"?"selected":""}>Côté coin ${(+o.wall)+1}</option><option value="end" ${o.hinge==="end"?"selected":""}>Côté coin ${(+o.wall+1)%G.walls.length+1}</option></select></label>`:""}
+        ${o.type==="opening"?"":`<label class="field">Ouverture<select data-op="${o.id}" data-k="swing"><option value="in" ${o.swing!=="out"?"selected":""}>Vers la pièce</option><option value="out" ${o.swing==="out"?"selected":""}>Vers l'extérieur</option></select></label>`}</div>`}
+      ${over?`<div class="status warn">L'ouverture dépasse la longueur du mur ${LET(o.wall)}.</div>`:""}
+    </div>`;}).join("");
+  box.querySelectorAll("[data-op]").forEach(el=>el.onchange=()=>{
+    const o=R.openings.find(x=>x.id===el.dataset.op); const k=el.dataset.k;
+    let v=el.value; if(["pos","width","sill","wall"].includes(k)) v=parseFloat(String(v).replace(",","."))||0;
+    o[k]=v; save(); props=[]; renderOps(); render(false);
+  });
+  box.querySelectorAll("[data-delop]").forEach(b=>b.onclick=()=>{R.openings=R.openings.filter(o=>o.id!==b.dataset.delop); save(); props=[]; renderOps(); render(false);});
+}
+document.querySelectorAll("[data-addop]").forEach(b=>b.onclick=()=>{
+  const t=b.dataset.addop, R=room();
+  const o={id:uid(),type:t,wall:0,pos:30,width:t==="door"?83:(t==="window"?120:(t==="opening"?90:140))};
+  if(t==="window") o.sill=90; else if(t!=="opening") {o.hinge="start"; o.swing="in";}
+  R.openings.push(o); save(); props=[]; renderOps(); render(false);
+});
+
+/* ================= Aménagement ================= */
+function renderUsages(){
+  const R=room();
+  document.getElementById("usages").innerHTML=USAGES.map(u=>`<button class="chip" data-u="${u.key}" aria-pressed="${R.usage===u.key}">${u.label}</button>`).join("");
+  document.querySelectorAll("[data-u]").forEach(b=>b.onclick=()=>{R.usage=b.dataset.u; props=[]; save(); renderUsages();});
+}
+function applyProp(){
+  const R=room(), p=props[propIdx]; if(!p) return;
+  R.furniture=p.items.map(i=>({...i})); selId=null; save();
+  const nav=document.getElementById("propnav"); nav.hidden=props.length<2;
+  document.getElementById("propLabel").textContent=`Proposition ${propIdx+1} sur ${props.length}`;
+  const msg=document.getElementById("layoutMsg");
+  msg.innerHTML = p.missing.length? `<div class="status warn">Pas assez de place pour : ${p.missing.join(", ")}. Vous pouvez l'ajouter à la main et le déplacer.</div>` :
+    `<div class="status ok">${R.furniture.length} meubles placés, passages et ouvertures dégagés.</div>`;
+  if(p.notes&&p.notes.length) msg.innerHTML+=`<div class="status ok">${p.notes.map(esc).join(" ")}</div>`;
+  if(p.unmet&&p.unmet.length) msg.innerHTML+=`<div class="status warn">Consignes non tenues :<br>${p.unmet.map(esc).join("<br>")}</div>`;
+  render(false); renderSel(); renderList();
+}
+document.getElementById("propose").onclick=()=>{
+  const R=room(), G=buildGeom(R);
+  if(G.closeErr>2){ toast("Fermez d'abord le contour de la pièce (onglet Pièce)."); return; }
+  props=proposals(R,R.usage||"chambre"); propIdx=0;
+  if(!props.length){ document.getElementById("layoutMsg").innerHTML=`<div class="status warn">Aucun aménagement possible avec ces dimensions.</div>`; return; }
+  applyProp();
+};
+document.getElementById("prevP").onclick=()=>{ if(props.length){propIdx=(propIdx-1+props.length)%props.length; applyProp();} };
+document.getElementById("nextP").onclick=()=>{ if(props.length){propIdx=(propIdx+1)%props.length; applyProp();} };
+document.getElementById("clearF").onclick=()=>{ room().furniture=[]; selId=null; props=[]; document.getElementById("propnav").hidden=true; document.getElementById("layoutMsg").innerHTML=""; save(); render(false); renderSel(); renderList(); };
+
+function renderSel(){
+  const R=room(), box=document.getElementById("selPanel");
+  const f=R.furniture.find(x=>x.id===selId);
+  if(!f){ box.innerHTML=""; return; }
+  const s=specOf(f), G=buildGeom(R), conf=checkAll(R,G)[f.id]||[];
+  box.innerHTML=`<div class="item sel ${conf.length?"bad":""}" style="margin-top:10px">
+    <div class="row"><div class="flex1"><div class="fname">${esc(s.name)}</div><div class="fmeta">${s.w} × ${s.d} × ${s.h||"—"} cm</div></div><div class="price">${fmtEur(s.price)}</div></div>
+    ${conf.length?`<div class="status warn">${conf.map(esc).join(" · ")}</div>`:`<div class="status ok">Bien placé.</div>`}
+    <div class="row" style="margin-top:6px">
+      <button class="btn" id="rotL" aria-label="Tourner de 90° à gauche">↺ 90°</button>
+      <button class="btn" id="rotR" aria-label="Tourner de 90° à droite">↻ 90°</button>
+      <button class="btn danger" id="delF">Retirer</button>
+      ${s.url?`<a class="btn" href="${esc(s.url)}" target="_blank" rel="noopener">Fiche produit</a>`:""}
+    </div></div>`;
+  const rot=d=>{ f.a=((f.a+d)%(2*Math.PI)); snapToWalls(f); save(); render(false); renderSel(); };
+  document.getElementById("rotL").onclick=()=>rot(-Math.PI/2);
+  document.getElementById("rotR").onclick=()=>rot(Math.PI/2);
+  document.getElementById("delF").onclick=()=>{ R.furniture=R.furniture.filter(x=>x.id!==f.id && x.parent!==f.id); selId=null; save(); render(false); renderSel(); renderList(); };
+}
+function addFurniture(key,custom){
+  const R=room(), G=buildGeom(R); const s=custom||CAT[key];
+  const f={id:uid(),key:custom?null:key,cx:r1(G.centroid[0]),cy:r1(G.centroid[1]),w:s.w,d:s.d,a:G.walls[0]?G.walls[0].fa:0};
+  if(custom) f.custom=custom;
+  R.furniture.push(f); selId=f.id; save(); render(false); renderSel(); renderList();
+  toast("Meuble ajouté au centre : faites-le glisser à sa place.");
+}
+function renderCatalog(){
+  document.getElementById("catalog").innerHTML=Object.entries(CAT).map(([k,c])=>`<div class="item row"><div class="flex1"><div class="fname">${esc(c.name)}</div><div class="fmeta">${c.w} × ${c.d} × ${c.h} cm</div></div><span class="price">${fmtEur(c.price)}</span><button class="btn" data-add="${k}" aria-label="Ajouter ${esc(c.name)}">Ajouter</button></div>`).join("");
+  document.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>addFurniture(b.dataset.add));
+}
+document.getElementById("addCustom").onclick=()=>{
+  const g=id=>document.getElementById(id).value.trim();
+  const w=parseFloat(g("cW").replace(",",".")), d=parseFloat(g("cD").replace(",","."));
+  if(!(w>0&&d>0)){ toast("Indiquez au moins la largeur et la profondeur."); return; }
+  const h=parseFloat(g("cH").replace(",","."))||80, price=parseFloat(g("cPrice").replace(",","."));
+  const name=g("cName")||"Meuble";
+  const url=/^https?:\/\//.test(g("cUrl"))?g("cUrl"):"";
+  addFurniture(null,{name,short:name,w,d,h,price:isFinite(price)?price:null,url,kind:"custom",clr:{front:60}});
+  ["cW","cD","cH","cName","cPrice","cUrl"].forEach(id=>document.getElementById(id).value="");
+};
+
+/* ================= Description libre → aménagement ================= */
+let sampleFn=null;
+(async()=>{ try{ if(window.claude && typeof window.claude.use==="function") sampleFn=await window.claude.use("sample"); }catch(e){ sampleFn=null; } })();
+function roomBrief(R,G){
+  const walls=G.walls.map((w,i)=>`mur ${LET(i)} : ${fmtCm(w.len)} cm`).join(" ; ");
+  const ops=R.openings.map(o=>`${OPN[o.type]} sur le mur ${LET(+o.wall)} (à ${o.pos} cm du coin ${+o.wall+1}, largeur ${o.width} cm${o.type==="window"?`, allège ${o.sill??90} cm`:""})`).join(" ; ")||"aucune";
+  return `Pièce « ${R.name} », ${(G.area/10000).toFixed(1)} m², hauteur ${R.height} cm. Murs dans le sens horaire : ${walls}. Ouvertures : ${ops}.`;
+}
+function wishPrompt(R,G,text){
+  const cat=Object.entries(CAT).map(([k,c])=>`${k} = ${c.name} (${c.w}×${c.d}×${c.h} cm)`).join("\n");
+  return `Tu traduis la description d'un aménagement de pièce en consignes structurées pour un logiciel de plan.
+${roomBrief(R,G)}
+
+Catalogue (clé = meuble) :
+${cat}
+Clés génériques : lit (taille au mieux), litDouble (160 sinon 140), custom (meuble hors catalogue : donne name, w largeur, d profondeur, h hauteur en cm, estimés si non précisés).
+
+Réponds uniquement par un objet JSON de la forme :
+{"items":[{"key":"<clé>","n":1,"wall":"A","under":true,"corner":true,"center":true,"near":"porte","away":"porte","facing":"fenetre","seats":6,"chevets":2}],"comment":"<une phrase en français si une demande est impossible ou ambiguë, sinon vide>"}
+Règles : n'inclus que les meubles demandés ; omets les champs sans consigne. wall = lettre du mur contre lequel poser le meuble. under = sous une fenêtre. corner = dans un coin. center = centré sur son mur. near / away / facing valent "porte", "fenetre" ou une clé de meuble. seats = nombre de couverts d'une table. chevets = nombre de tables de chevet d'un lit (0 si « sans chevet »). Les chaises d'une table s'expriment par seats, pas par des items chaise. La chaise du bureau est ajoutée automatiquement. Un meuble refusé (« pas de… ») n'apparaît pas.
+
+Description de l'utilisateur :
+"""${text.slice(0,2000)}"""`;
+}
+let wishCtl=null;
+document.getElementById("wishGo").onclick=async()=>{
+  const R=room(), G=buildGeom(R); const text=document.getElementById("wish").value.trim();
+  const msg=document.getElementById("wishMsg"), go=document.getElementById("wishGo"), stop=document.getElementById("wishStop");
+  if(!text){ toast("Décrivez d'abord l'aménagement souhaité."); return; }
+  if(G.closeErr>2){ toast("Fermez d'abord le contour de la pièce (onglet Pièce)."); return; }
+  R.wish=text; save();
+  let prog=null, how="";
+  if(sampleFn){
+    go.disabled=true; stop.hidden=false; wishCtl=new AbortController();
+    msg.innerHTML=`<div class="status ok">Lecture de votre description…</div>`;
+    try{
+      prog=validateProgram(await sampleFn.json(wishPrompt(R,G,text),{modelTier:"quick",signal:wishCtl.signal}));
+      if(!prog.items.length) prog=null; else how="Claude";
+    }catch(e){
+      if(e&&e.code==="cancelled"){ msg.innerHTML=""; go.disabled=false; stop.hidden=true; return; }
+      if(e&&(e.code==="not_granted"||e.code==="sampling_disabled")) sampleFn=null;
+      prog=null;
+    }
+    go.disabled=false; stop.hidden=true;
+  }
+  if(!prog){ const loc=parseWish(text); prog=validateProgram(loc); prog.excluded=loc.excluded; how="local"; }
+  if(!prog.items.length){ msg.innerHTML=`<div class="status warn">Aucun meuble reconnu. Nommez les meubles (lit, armoire, bureau, canapé, table…) et, si besoin, le mur (« mur B »), la fenêtre ou la porte.</div>`; return; }
+  props=proposals(R,prog); propIdx=0;
+  const lines=describeProgram(prog);
+  msg.innerHTML=`<div class="status ok"><b>Compris :</b><br>${lines.map(esc).join("<br>")}${prog.comment?`<br><i>${esc(prog.comment)}</i>`:""}</div>`;
+  if(!props.length){ msg.innerHTML+=`<div class="status warn">Aucun aménagement possible avec ces dimensions.</div>`; return; }
+  applyProp();
+};
+document.getElementById("wishStop").onclick=()=>{ if(wishCtl) wishCtl.abort(); };
+
+/* ================= Liste & total ================= */
+function grouped(){
+  const R=room(); const m=new Map();
+  for(const f of R.furniture){ const s=specOf(f); const k=f.key||("custom:"+s.name+s.w+s.d); const e=m.get(k)||{s,n:0}; e.n++; m.set(k,e); }
+  return [...m.values()];
+}
+function renderList(){
+  const g=grouped(), box=document.getElementById("flist");
+  if(!g.length){ box.innerHTML=`<p class="hint">Aucun meuble pour l'instant. Lancez une proposition depuis l'onglet Aménager.</p>`; document.getElementById("ftotal").innerHTML=""; renderPrint(); return; }
+  box.innerHTML=g.map(({s,n})=>`<div class="item row"><div class="flex1"><div class="fname">${n>1?n+" × ":""}${esc(s.name)}</div><div class="fmeta">${s.w} × ${s.d} × ${s.h||"—"} cm${s.url?` · <a href="${esc(s.url)}" target="_blank" rel="noopener">voir la fiche</a>`:""}</div></div><span class="price">${s.price!=null?fmtEur(s.price*n):"—"}</span></div>`).join("");
+  const tot=g.reduce((t,{s,n})=>t+(s.price||0)*n,0);
+  document.getElementById("ftotal").innerHTML=`<div class="total"><span>Total</span><span class="price">${fmtEur(Math.round(tot*100)/100)}</span></div>`;
+  renderPrint();
+}
+function renderPrint(){
+  const R=room(), G=buildGeom(R), g=grouped();
+  const tot=g.reduce((t,{s,n})=>t+(s.price||0)*n,0);
+  document.getElementById("printlist").innerHTML=`<p style="font-size:11px">${esc(R.name)} — surface ${(G.area/10000).toLocaleString("fr-FR",{maximumFractionDigits:2})} m², hauteur ${R.height} cm. Cotes intérieures en cm.</p>`+
+   (g.length?`<table><tr><th>Qté</th><th>Meuble</th><th>Dimensions (cm)</th><th>Prix</th></tr>${g.map(({s,n})=>`<tr><td>${n}</td><td>${esc(s.name)}</td><td>${s.w}×${s.d}×${s.h||"—"}</td><td>${s.price!=null?fmtEur(s.price*n):"—"}</td></tr>`).join("")}<tr><td></td><td><b>Total</b></td><td></td><td><b>${fmtEur(Math.round(tot*100)/100)}</b></td></tr></table><p style="font-size:9px">Prix relevés sur ikea.com/fr le 09/11/2026, susceptibles d'évoluer.</p>`:"");
+}
+
+/* ================= Import d'un scan LiDAR (RoomPlan / OpenPlan3D) ================= */
+// Repère RoomPlan : mètres, Y vers le haut, matrices 4×4 en colonnes (translation aux indices 12-14).
+// Le plan au sol est X (droite) / Z (vers le bas de l'écran), sans symétrie.
+function findWithWalls(o,depth=0){
+  if(!o||typeof o!=="object"||depth>6) return null;
+  if(Array.isArray(o.walls)&&o.walls.length) return o;
+  for(const k of Object.keys(o)){ const r=findWithWalls(o[k],depth+1); if(r) return r; }
+  return null;
+}
+function normalizeScan(src){
+  const d=findWithWalls(src); if(!d) throw new Error("Aucun mur trouvé dans ce fichier.");
+  const segs=[], ops=[]; const isNum=x=>typeof x==="number"&&isFinite(x);
+  const lvl=x=>(x.story??x.level??0);
+  if(d.walls.some(w=>Array.isArray(w.transform)&&w.transform.length>=16)){
+    // Format RoomPlan (CapturedRoom JSON, room.json, format d'échange)
+    const byId={};
+    for(const w of d.walls){
+      if(lvl(w)!==0) continue;
+      const t=w.transform, dm=w.dimensions||[];
+      if(!t||t.length<16||!isNum(dm[0])||dm[0]<0.05) continue;
+      const n=Math.hypot(t[0],t[2])||1, u=[t[0]/n,t[2]/n], c=[t[12]*100,t[14]*100], L=dm[0]*100;
+      const seg={A:[c[0]-u[0]*L/2,c[1]-u[1]*L/2],B:[c[0]+u[0]*L/2,c[1]+u[1]*L/2],h:(dm[1]||2.5)*100,floorY:t[13]-(dm[1]||0)/2,id:w.identifier};
+      segs.push(seg); if(w.identifier) byId[w.identifier]=seg;
+    }
+    const floorY=segs.length?Math.min(...segs.map(s=>s.floorY)):0;
+    const add=(arr,type)=>{ for(const o of (arr||[])){
+      if(lvl(o)!==0) continue;
+      const t=o.transform, dm=o.dimensions||[]; if(!t||t.length<16||!isNum(dm[0])) continue;
+      const par=o.parentIdentifier&&byId[o.parentIdentifier];
+      const fy=par?par.floorY:floorY;
+      let ty=type;
+      if(type==="door" && (o.style==="double"||o.style==="patio"||o.style==="sliding")) ty= o.style==="double"?"french":"opening";
+      const op={type:ty,c:[t[12]*100,t[14]*100],width:dm[0]*100,par};
+      if(type==="window") op.sill=Math.max(0,Math.round(isNum(o.sillHeight)?o.sillHeight*100:(t[13]-(dm[1]||0)/2-fy)*100));
+      if(type==="door" && typeof o.hingeLeft==="boolean") op.hinge=o.hingeLeft?"start":"end";
+      ops.push(op);
+    }};
+    const passIds=new Set((d.openings||[]).map(o=>o.identifier));
+    add((d.doors||[]).filter(o=>!passIds.has(o.identifier)),"door");
+    add(d.windows,"window"); add(d.openings,"opening");
+  } else if(d.walls.some(w=>w.start&&w.end)){
+    // Plan modifiable OpenPlan3D (plan.json) : extrémités en mètres, ouvertures repérées par leur centre (0 à 1 le long du mur)
+    const byId={};
+    for(const w of d.walls){
+      if(lvl(w)!==0||!w.start||!w.end) continue;
+      const seg={A:[w.start.x*100,w.start.y*100],B:[w.end.x*100,w.end.y*100],h:(w.height||2.5)*100,id:w.id};
+      if(V.dist(seg.A,seg.B)<5) continue;
+      segs.push(seg); byId[w.id]=seg;
+    }
+    for(const o of (d.openings||[])){
+      const w=byId[o.wallID]; if(!w||!isNum(o.position)||!isNum(o.width)) continue;
+      const c=V.add(w.A,V.mul(V.sub(w.B,w.A),o.position));
+      const ty=o.kind==="window"?"window":(o.style==="double"?"french":(o.style==="sliding"||o.style==="patio"?"opening":"door"));
+      const op={type:ty,c,width:o.width*100,par:w};
+      if(ty==="window") op.sill=Math.round((isNum(o.sillHeight)?o.sillHeight:0.9)*100);
+      if(ty==="door"&&typeof o.hingeLeft==="boolean") op.hinge=o.hingeLeft?"start":"end";
+      ops.push(op);
+    }
+  } else throw new Error("Format de scan non reconnu.");
+  if(segs.length<3) throw new Error("Le scan contient moins de trois murs exploitables.");
+  return {segs,ops};
+}
+function lineX(a,b){ // intersection des droites portées par deux segments
+  const d1=V.sub(a.B,a.A), d2=V.sub(b.B,b.A), den=V.cross(d1,d2);
+  const n1=V.len(d1), n2=V.len(d2);
+  if(Math.abs(den)/(n1*n2) < Math.sin(10*Math.PI/180)) return null; // quasi parallèles
+  const t=V.cross(V.sub(b.A,a.A),d2)/den; return V.add(a.A,V.mul(d1,t));
+}
+function scanLoops(segs){
+  const TOL=60, loops=[]; const used=new Set();
+  const order=[...segs].sort((a,b)=>V.dist(b.A,b.B)-V.dist(a.A,a.B));
+  for(const start of order){
+    if(used.has(start)) continue;
+    const loop=[{A:start.A,B:start.B,src:start}]; const local=new Set([start]);
+    let end=start.B, closed=false;
+    for(let guard=0;guard<segs.length;guard++){
+      if(loop.length>=3 && V.dist(end,start.A)<TOL){ closed=true; break; }
+      let best=null,bd=TOL,flip=false;
+      for(const s of segs){ if(local.has(s)||used.has(s)) continue;
+        const da=V.dist(end,s.A), db=V.dist(end,s.B);
+        if(da<bd){bd=da;best=s;flip=false;} if(db<bd){bd=db;best=s;flip=true;} }
+      if(!best) break;
+      local.add(best); loop.push(flip?{A:best.B,B:best.A,src:best}:{A:best.A,B:best.B,src:best}); end=flip?best.A:best.B;
+    }
+    if(closed){ loop.forEach(l=>used.add(l.src)); loops.push(loop); }
+  }
+  loops.unused=segs.length-used.size;
+  return loops;
+}
+function loopPolygon(loop){
+  const n=loop.length, pts=[];
+  for(let i=0;i<n;i++){
+    const prev=loop[(i-1+n)%n], cur=loop[i];
+    const x=lineX(prev,cur);
+    if(x) pts.push(x); // sinon : murs alignés, on les fusionne
+  }
+  // aire signée (repère écran, y vers le bas) : positive = sens horaire attendu
+  let a=0; for(let i=0;i<pts.length;i++){const p=pts[i],q=pts[(i+1)%pts.length]; a+=V.cross(p,q);}
+  if(a<0) pts.reverse();
+  return {pts,area:Math.abs(a)/2};
+}
+function scanToRoom(scan,snap){
+  const loops=scanLoops(scan.segs);
+  if(!loops.length) throw new Error("Les murs du scan ne forment pas un contour fermé. Refaites le scan en faisant tout le tour de la pièce.");
+  const polys=loops.map(loopPolygon).filter(p=>p.pts.length>=3).sort((a,b)=>b.area-a.area);
+  if(!polys.length) throw new Error("Contour du scan inexploitable.");
+  let pts=polys[0].pts;
+  // départ sur le mur le plus long
+  let k=0,best=0; for(let i=0;i<pts.length;i++){const L=V.dist(pts[i],pts[(i+1)%pts.length]); if(L>best){best=L;k=i;}}
+  pts=[...pts.slice(k),...pts.slice(0,k)];
+  const n=pts.length, walls=[];
+  for(let i=0;i<n;i++){
+    const A=pts[i],B=pts[(i+1)%n],C=pts[(i+2)%n];
+    const h1=Math.atan2(B[1]-A[1],B[0]-A[0]), h2=Math.atan2(C[1]-B[1],C[0]-B[0]);
+    let turn=(h2-h1)*180/Math.PI; while(turn<=-180)turn+=360; while(turn>180)turn-=360;
+    let ang=r1(180-turn);
+    if(snap){ if(Math.abs(ang-90)<=2.5) ang=90; else if(Math.abs(ang-270)<=2.5) ang=270; }
+    walls.push({len:Math.round(V.dist(A,B)),ang});
+  }
+  // ouvertures : rattachées au mur le plus proche du contour retenu
+  const openings=[]; let lost=0;
+  for(const o of scan.ops){
+    let bi=-1,bd=40,bt=0;
+    for(let i=0;i<n;i++){
+      const A=pts[i],B=pts[(i+1)%n],L=V.dist(A,B),u=V.mul(V.sub(B,A),1/L);
+      const t=V.dot(V.sub(o.c,A),u), dd=Math.abs(V.cross(u,V.sub(o.c,A)));
+      if(t<-10||t>L+10) continue;
+      if(dd<bd){bd=dd;bi=i;bt=t;}
+    }
+    if(bi<0){lost++;continue;}
+    const L=walls[bi].len, w=Math.round(o.width);
+    const op={id:uid(),type:o.type,wall:bi,pos:Math.max(0,Math.min(L-w,Math.round(bt-o.width/2))),width:w};
+    if(o.type==="window") op.sill=o.sill??90;
+    else if(o.type!=="opening"){
+      op.hinge=o.hinge||"start"; op.swing="in";
+      // le mur retenu peut être parcouru en sens inverse du mur scanné : on inverse alors la charnière
+      if(o.hinge && o.par){ const A=pts[bi],B=pts[(bi+1)%n]; if(V.dot(V.sub(B,A),V.sub(o.par.B,o.par.A))<0) op.hinge=o.hinge==="start"?"end":"start"; }
+    }
+    openings.push(op);
+  }
+  const hs=scan.segs.map(s=>s.h).filter(x=>x>150).sort((a,b)=>a-b);
+  const height=hs.length?Math.round(hs[Math.floor(hs.length/2)]):250;
+  return {walls,openings,height,extraLoops:polys.length-1,lost,unused:loops.unused||0};
+}
+async function readScanFile(file){
+  if(/\.zip$/i.test(file.name)||file.type.includes("zip")){
+    if(!window.JSZip){
+      await new Promise((ok,ko)=>{const sc=document.createElement("script"); sc.src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"; sc.onload=ok; sc.onerror=()=>ko(new Error("Impossible de charger le lecteur de ZIP : vérifiez la connexion.")); document.head.appendChild(sc);});
+    }
+    const zip=await JSZip.loadAsync(file);
+    const names=Object.keys(zip.files).filter(n=>/\.json$/i.test(n)&&!zip.files[n].dir);
+    const pref=["plan.json","room.json"]; names.sort((a,b)=>{const ia=pref.indexOf(a.split("/").pop()), ib=pref.indexOf(b.split("/").pop()); return (ia<0?9:ia)-(ib<0?9:ib);});
+    for(const nm of names){ try{ const j=JSON.parse(await zip.files[nm].async("string")); if(findWithWalls(j)) return j; }catch(e){} }
+    throw new Error("Aucun fichier de plan (plan.json ou room.json) dans ce ZIP.");
+  }
+  try{ return JSON.parse(await file.text()); }catch(e){ throw new Error("Ce fichier n'est pas un scan lisible : choisissez le .json ou le .zip exporté par l'app de scan."); }
+}
+document.getElementById("scanFile").onchange=async e=>{
+  const file=e.target.files[0]; e.target.value=""; if(!file) return;
+  const msg=document.getElementById("scanMsg"); msg.innerHTML=`<div class="status ok">Lecture du scan…</div>`;
+  try{
+    const data=await readScanFile(file);
+    const res=scanToRoom(normalizeScan(data),document.getElementById("scanSnap").checked);
+    const r=defaultRoom(); r.name="Pièce scannée "+(S.rooms.length+1); r.walls=res.walls; r.openings=res.openings; r.height=res.height; r.furniture=[];
+    S.rooms.push(r); S.cur=r.id; selId=null; props=[]; save(); renderAll(true);
+    const G=buildGeom(r); let closing="";
+    if(G.closeErr>1){ document.getElementById("closeWall").click(); closing=` Contour refermé (écart de ${fmtCm(G.closeErr)} cm reporté sur le dernier mur).`; }
+    const notes=[];
+    if(res.extraLoops>0) notes.push(`le scan contient ${res.extraLoops+1} pièces : la plus grande a été reprise`);
+    if(res.unused>0) notes.push(`${res.unused} mur(s) du scan hors du contour retenu (autre pièce ou cloison)`);
+    if(res.lost>0) notes.push(`${res.lost} ouverture(s) hors de ce contour, non reprise(s)`);
+    document.getElementById("scanMsg").innerHTML=`<div class="status ok">Scan importé : ${r.walls.length} murs, ${r.openings.length} ouverture(s), hauteur ${r.height} cm, ${(buildGeom(r).area/10000).toLocaleString("fr-FR",{maximumFractionDigits:2})} m².${closing} Vérifiez le sens d'ouverture des portes dans l'onglet Ouvertures.</div>`+(notes.length?`<div class="status warn">À vérifier : ${notes.join(" ; ")}.</div>`:"");
+  }catch(err){
+    msg.innerHTML=`<div class="status warn">${esc(err.message||"Fichier illisible.")}</div>`;
+  }
+};
+
+/* ================= Gestion des pièces & exports ================= */
+document.getElementById("newRoom").onclick=()=>{ const r=defaultRoom(); r.name="Pièce "+(S.rooms.length+1); r.openings=[]; S.rooms.push(r); S.cur=r.id; selId=null; props=[]; save(); renderAll(true); };
+document.getElementById("dupRoom").onclick=()=>{ const r=JSON.parse(JSON.stringify(room())); r.id=uid(); r.name+=" (copie)"; S.rooms.push(r); S.cur=r.id; save(); renderAll(true); };
+let delArmed=null;
+document.getElementById("delRoom").onclick=e=>{
+  const b=e.currentTarget;
+  if(delArmed!==S.cur){ delArmed=S.cur; b.textContent="Toucher à nouveau pour supprimer « "+room().name+" »"; setTimeout(()=>{delArmed=null; b.textContent="Supprimer cette pièce";},4000); return; }
+  delArmed=null; b.textContent="Supprimer cette pièce";
+  S.rooms=S.rooms.filter(r=>r.id!==S.cur); if(!S.rooms.length) S.rooms.push(defaultRoom()); S.cur=S.rooms[0].id; selId=null; props=[]; save(); renderAll(true);
+};
+document.getElementById("expPdf").onclick=()=>{ selId=null; render(true); renderPrint(); setTimeout(()=>window.print(),150); };
+document.getElementById("expJson").onclick=()=>{
+  const blob=new Blob([JSON.stringify(room(),null,1)],{type:"application/json"});
+  shareOrDownload(blob,(room().name||"piece").replace(/[^\w\-]+/g,"_")+".json");
+};
+document.getElementById("impJson").onchange=e=>{
+  const file=e.target.files[0]; if(!file) return;
+  file.text().then(t=>{ const r=JSON.parse(t); if(!Array.isArray(r.walls)) throw 0; r.id=uid(); r.openings=r.openings||[]; r.furniture=r.furniture||[]; S.rooms.push(r); S.cur=r.id; save(); renderAll(true); toast("Pièce importée."); })
+   .catch(()=>toast("Ce fichier n'est pas une sauvegarde Plan Pièce."));
+  e.target.value="";
+};
+document.getElementById("expPng").onclick=async()=>{
+  selId=null; render(true);
+  const G=svg._G, fs=svg._fs, t=+room().thick||20, m=t+fs*5.5;
+  const vb={x:G.bbox.x0-m,y:G.bbox.y0-m,w:(G.bbox.x1-G.bbox.x0)+2*m,h:(G.bbox.y1-G.bbox.y0)+2*m+fs*2};
+  const scale=Math.min(4, 2400/Math.max(vb.w,vb.h)*1);
+  const W=Math.round(vb.w*scale), H=Math.round(vb.h*scale);
+  const xml=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}">${svg.innerHTML}<text x="${vb.x+fs}" y="${vb.y+fs*1.6}" font-size="${fs*1.2}" font-family="Arial Narrow, sans-serif" font-weight="600" fill="#22313B">${esc(room().name)} — ${(G.area/10000).toLocaleString("fr-FR",{maximumFractionDigits:2})} m²</text></svg>`;
+  const img=new Image(); img.onload=()=>{
+    const c=document.createElement("canvas"); c.width=W; c.height=H; const x=c.getContext("2d");
+    x.fillStyle="#fff"; x.fillRect(0,0,W,H); x.drawImage(img,0,0,W,H);
+    c.toBlob(b=>shareOrDownload(b,(room().name||"plan").replace(/[^\w\-]+/g,"_")+".png"),"image/png");
+  };
+  img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(xml);
+};
+async function shareOrDownload(blob,name){
+  try{
+    const file=new File([blob],name,{type:blob.type});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:name}); return; }
+  }catch(e){ if(e&&e.name==="AbortError") return; }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+}
+let toastT; function toast(m){const t=document.getElementById("toast"); t.textContent=m; t.classList.add("on"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("on"),2600);}
+
+const framed=(()=>{try{return window.self!==window.top;}catch(e){return true;}})();
+if(framed){ ["expPng","expPdf","expJson"].forEach(id=>{const b=document.getElementById(id); if(b) b.closest(".row").hidden=true;});
+  const n=document.createElement("p"); n.className="small"; n.textContent="Les exports (image, PDF, sauvegarde) fonctionnent dans la version installée sur l'écran d'accueil."; document.getElementById("impJson").closest(".row").after(n);
+  document.getElementById("impJson").closest(".row").hidden=true; }
+function renderAll(fit){
+  const R=room();
+  document.getElementById("wish").value=R.wish||""; document.getElementById("wishMsg").innerHTML="";
+  renderRoomSel(); rname.value=R.name; rheight.value=R.height; rthick.value=R.thick||20;
+  renderWalls(); renderOps(); renderUsages(); renderCatalog(); renderSel(); renderList();
+  document.getElementById("propnav").hidden=true; document.getElementById("layoutMsg").innerHTML="";
+  render(fit);
+}
+window.addEventListener("resize",()=>render(true));
+renderAll(true);
+if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
+// accès pour les tests
+window.__PP={proposals,parseWish,validateProgram,describeProgram,runProgram,normalizeScan,scanToRoom,buildGeom,proposals,checkAll,room:()=>room(),S:()=>S,render,applyProp:(r,u)=>{}};
+</script>
+</body>
+</html>
