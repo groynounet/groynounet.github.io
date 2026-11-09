@@ -424,7 +424,11 @@ const PRODUCTS_RAW=[
 ["canapeLit:vente-unique-canape-3-places-convertible", "canapeLit", "Vente-unique", "Canapé 3 places convertible express VIZIR bleu (couchage 140×190)", 194.0, 94.0, 102.0, 1149.99, "https://www.vente-unique.com/p/canape-3-places-convertible-express-en-tissu-vizir-bleu-couchage-140cm-matelas-14cm", null, 223.0],
 ["commode:castorama-commode-blanche-4-tiroirs-good", "commode", "Castorama", "Commode blanche 4 tiroirs GoodHome Atomia (profonde 58 cm)", 75.0, 58.0, 75.0, 227.0, "https://www.castorama.fr/commode-blanche-4-tiroirs-goodhome-atomia-h-75-x-l-75-x-p-58-cm/5059340930916_CAFR.prd"],
 ["commode:vente-unique-commode-9-tiroirs-en-tissu-", "commode", "Vente-unique", "Commode 9 tiroirs en tissu cadre acier (tri des pièces)", 100.0, 30.0, 100.0, 75.8, "https://www.vente-unique.com/p/commode-en-tissu-avec-9-tiroirs-3-couches-cadre-en-acier-plateau-bois-avec-poignees-style-boheme"],
-["commode:castorama-commode-etroite-6-tiroirs-good", "commode", "Castorama", "Commode étroite 6 tiroirs GoodHome Atomia blanche", 37.5, 45.0, 112.5, 257.0, "https://www.castorama.fr/commode-blanche-6-tiroirs-goodhome-atomia-h-112-5-x-l-37-5-x-p-45-cm/5059340102610_CAFR.prd"]
+["commode:castorama-commode-etroite-6-tiroirs-good", "commode", "Castorama", "Commode étroite 6 tiroirs GoodHome Atomia blanche", 37.5, 45.0, 112.5, 257.0, "https://www.castorama.fr/commode-blanche-6-tiroirs-goodhome-atomia-h-112-5-x-l-37-5-x-p-45-cm/5059340102610_CAFR.prd"],
+["vitrine:ikea-milsbo-vitrine-blanc-73x175-prix-ik", "vitrine", "IKEA", "MILSBO Vitrine blanc 73x175 (prix IKEA Suisse, 249 CHF converti)", 73.0, 42.0, 175.0, 269.67, "https://www.ikea.com/ch/fr/p/milsbo-vitrine-blanc-00396416"],
+["vitrine:ikea-milsbo-vitrine-basse-blanc-101x100-", "vitrine", "IKEA", "MILSBO Vitrine basse blanc 101x100 (prix IKEA Suisse, 229 CHF converti)", 101.0, 38.0, 100.0, 248.01, "https://www.ikea.com/ch/fr/p/milsbo-vitrine-blanc-20452307"],
+["kallaxH:ikea-kallax-etagere-blanc-77x77-prix-ike", "kallaxH", "IKEA", "KALLAX Étagère blanc 77x77 (prix IKEA Belgique)", 76.5, 39.0, 76.5, 39.99, "https://www.ikea.com/be/en/p/kallax-shelving-unit-white-20275814/"],
+["grandBureau:ikea-lagkapten-alex-bureau-200x60-blanc-", "grandBureau", "IKEA", "LAGKAPTEN / ALEX Bureau 200x60 blanc motif chêne (prix IKEA Belgique)", 200.0, 60.0, 73.0, 109.98, "https://www.ikea.com/be/fr/p/lagkapten-alex-bureau-teinte-blanc-motif-chene-blanc-s19607678"]
 ];
 // Catalogue multi-marques : CAT garde une référence par famille (moteur d'aménagement) ;
 // chaque famille peut avoir d'autres produits (marques, gammes de prix). CAT_BASE = référence d'origine.
@@ -1036,7 +1040,7 @@ function proposals(room,usage){
     }
   } finally { resetCat(); }
   // à qualité égale, la gamme départage : petit prix = le moins cher, haut de gamme = le plus soigné
-  const k=tier==="eco"?-0.25:tier==="lux"?0.12:0, val=r=>r.score+k*r.total;
+  const k=tier==="eco"?-0.6:tier==="lux"?0.15:0, val=r=>r.score+k*r.total;
   out.sort((a,b)=>(a.missing.length-b.missing.length)||((a.unmet||[]).length-(b.unmet||[]).length)||((a.over?1:0)-(b.over?1:0))||(val(b)-val(a)));
   return out.slice(0,8);
 }
