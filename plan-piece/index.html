@@ -793,7 +793,7 @@ function packLayout(ctx,missing,notes,unmet=[]){
 /* ================= Aménagement décrit en texte libre ================= */
 // Programme : {items:[{key,n,wall,under,near,away,corner,center,facing,seats,chevets,label,w,d,h}]}
 const PROG_KEYS=["tapis","vitrine","vitrineS","caisson","grandBureau","lit","litDouble","lit160","lit140","lit90","chevet","armoire","commode","bureau","chaiseB","billy","kallax","kallaxH","canape","fauteuil","tableBasse","meubleTV","table","chaise","custom"];
-const PRIORITY=["lit","litDouble","lit160","lit140","lit90","canape","table","grandBureau","bureau","tapis","armoire","commode","meubleTV","billy","vitrine","kallaxH","kallax","vitrineS","caisson","fauteuil","tableBasse","custom","chevet","chaise","chaiseB"];
+const PRIORITY=["lit","litDouble","lit160","lit140","lit90","grandBureau","bureau","canape","table","tapis","armoire","commode","meubleTV","billy","vitrine","kallaxH","kallax","vitrineS","caisson","fauteuil","tableBasse","custom","chevet","chaise","chaiseB"];
 const SPOTS={porte:"la porte",fenetre:"la fenêtre"};
 function spotPoints(ctx,what){
   if(what==="porte") return ctx.doors;
@@ -875,7 +875,9 @@ function runProgram(room,G,prog,seed){
   const items=(prog.items||[]).filter(r=>PROG_KEYS.includes(r.key));
   const has=k=>items.find(r=>r.key===k);
   const chairsReq=has("chaise"), coffeeReq=has("tableBasse"), tvReq=has("meubleTV");
-  const ordered=[...items].sort((a,b)=>PRIORITY.indexOf(a.key)-PRIORITY.indexOf(b.key));
+  // les meubles avec une consigne précise (mur, sous la fenêtre, coin) passent en premier : ce sont les choix de l'utilisateur
+  const pinned=r=>(r.wall!=null||r.under||r.corner)?0:1;
+  const ordered=[...items].sort((a,b)=>(pinned(a)-pinned(b))||(PRIORITY.indexOf(a.key)-PRIORITY.indexOf(b.key)));
   for(const r of ordered){
     const n=Math.max(1,Math.min(6,+r.n||1)); const label=labelOf(r);
     for(let k=0;k<n;k++){
@@ -963,7 +965,8 @@ function parseWish(text){
     const found=[];
     const negated=word=>new RegExp("\\b(pas de|pas d|sans|aucun|aucune|ni)\\s+(?:\\w+\\s+)?(?:"+word+")").test(c);
     const WORD={lit:"lits?",chevet:"(?:tables? de (?:chevet|nuit)|chevets?)",armoire:"(?:armoires?|penderies?|dressing|placards?)",commode:"commodes?",bureau:"bureaux?",billy:"(?:bibliotheques?|billy)",kallax:"(?:etageres?|kallax|rangements?)",canape:"(?:canapes?|sofas?)",fauteuil:"fauteuils?",tableBasse:"tables? basses?",meubleTV:"(?:meubles? (?:tv|tele)|tv|tele|television)",table:"tables?",chaise:"chaises?",vitrine:"vitrines?",caisson:"caissons?",tapis:"(?:tapis|espace)",grandBureau:"(?:table de montage|plan de travail|grand bureau)"};
-    const push=(key,extra={})=>{ const wk=/^lit/.test(key)?"lit":key; if(WORD[wk]&&negated(WORD[wk])){ excluded.add(key); return; } found.push({key,...extra}); };
+    let negHit=false;
+    const push=(key,extra={})=>{ const wk=/^lit/.test(key)?"lit":key; if(WORD[wk]&&negated(WORD[wk])){ excluded.add(key); negHit=true; return; } found.push({key,...extra}); };
     let m;
     if(/\blits?\b/.test(c) && !/canape.lit/.test(c)){
       let key="lit";
@@ -1012,7 +1015,7 @@ function parseWish(text){
     if((m=c.match(/face (a|au|aux) (la |l )?(fenetre|porte|tele|tv|canape|lit|bureau)/))){ const tg={fenetre:"fenetre",porte:"porte",tele:"meubleTV",tv:"meubleTV",canape:"canape",lit:"lit",bureau:"bureau"}[m[3]]; cons.facing=tg; }
     if(/(sans|pas de|aucun|aucune)\s+(table de )?(chevet|nuit)/.test(c)) { const b=[...items,...found].reverse().find(x=>/^lit/.test(x.key)); if(b) b.chevets=0; excluded.delete("chevet"); }
     if(found.length){ found.forEach((f,i)=>{ if(i===0) Object.assign(f,cons); items.push(f); }); }
-    else if(items.length && Object.keys(cons).length) Object.assign(items[items.length-1],cons);
+    else if(items.length && Object.keys(cons).length && !negHit) Object.assign(items[items.length-1],cons);
   }
   // rampants : « mur B sous rampant, jambette de 100, rampant de 180 cm (ou 45°) »
   const slopes=[];
@@ -1071,6 +1074,25 @@ function validateProgram(p){
     slopes.push(o);
   }
   return {items, slopes, mentionsSlope:!!p?.mentionsSlope, comment: typeof p?.comment==="string"?p.comment.slice(0,400):""};
+}
+// garde-fous : la lecture ne doit pas ajouter ce que la description n'implique pas
+function sanitizeProgram(prog,text){
+  const t=deaccent(text);
+  let items=[...prog.items];
+  const has=k=>items.some(i=>i.key===k);
+  // table à manger seulement si on parle de repas, de couverts ou de chaises (« table de montage » = plan de travail)
+  if(has("table") && !/manger|repas|couverts|diner|dejeuner|chaises|table (?!de montage|de travail|basse|de chevet|de nuit)/.test(t)){
+    items=items.map(i=>i.key==="table"?{key:has("grandBureau")||/seul bureau|un bureau|mon bureau|le bureau/.test(t)?null:"grandBureau",label:i.label||"Table de montage",near:i.near,wall:i.wall}:i).filter(i=>i.key);
+  }
+  // « un seul bureau », « en gardant / conservant mon bureau » : pas de second plan de travail
+  if(/seul bureau|un bureau seulement|(garder|gardant|conserver|conservant|garde|conserve)\s+(le |mon |un |ce )?bureau/.test(t) && items.some(i=>i.key==="bureau") ) items=items.filter(i=>i.key!=="grandBureau");
+  if(/seul bureau/.test(t)){ let seen=false; items=items.filter(i=>{ if(i.key!=="bureau"&&i.key!=="grandBureau") return true; if(seen) return false; seen=true; i.n=1; return true; }); }
+  // espace libre : « pas aussi grand », « plus petit » → réduit ; « pas d'espace libre » → supprimé
+  if(/(pas|moins|plus petit|reduit).{0,25}(espace|tapis).{0,30}(aussi grand|si grand|plus petit|moins grand|trop grand)|(espace|tapis).{0,20}(plus petit|moins grand|reduit)/.test(t)){
+    items=items.map(i=>i.key==="tapis"?{...i,w:Math.min(+i.w||120,80),d:Math.min(+i.d||180,120)}:i);
+    if(!has("tapis") && /lego|jeux?/.test(t)) items.push({key:"tapis",w:80,d:120,center:true});
+  } else if(/(pas|sans|aucun) (d |de |d')?(espace|tapis)/.test(t.replace(/’/g,"'"))) items=items.filter(i=>i.key!=="tapis");
+  return {...prog, items};
 }
 function describeProgram(p){
   const map={porte:"la porte",fenetre:"la fenêtre"};
@@ -1284,7 +1306,7 @@ function render(fit){
 }
 function fitView(G,t,fs){
   const m=t+fs*5;
-  view={x:G.bbox.x0-m,y:G.bbox.y0-m,w:(G.bbox.x1-G.bbox.x0)+2*m,h:(G.bbox.y1-G.bbox.y0)+2*m+fs*2};
+  view={x:G.bbox.x0-m,y:G.bbox.y0-m-fs*2.6,w:(G.bbox.x1-G.bbox.x0)+2*m,h:(G.bbox.y1-G.bbox.y0)+2*m+fs*4.6};
   const r=svg.getBoundingClientRect(); const ar=(r.width||1)/(r.height||1);
   if(view.w/view.h<ar){const nw=view.h*ar; view.x-=(nw-view.w)/2; view.w=nw;} else {const nh=view.w/ar; view.y-=(nh-view.h)/2; view.h=nh;}
 }
@@ -1601,7 +1623,7 @@ Clés génériques : lit (taille au mieux), litDouble (160 sinon 140), custom (m
 Réponds uniquement par un objet JSON de la forme :
 {"items":[{"key":"<clé>","n":1,"wall":"A","under":true,"underSlope":true,"corner":true,"center":true,"near":"porte","away":"porte","facing":"fenetre","seats":6,"chevets":2}],"slopes":[{"wall":"B","jamb":100,"len":210,"deg":40}],"comment":"<une phrase en français si une demande est impossible ou ambiguë, sinon vide>"}
 Règles : n'inclus que les meubles demandés ; omets les champs sans consigne. wall = lettre du mur contre lequel poser le meuble. under = sous une fenêtre. underSlope = sous le rampant (partie basse du plafond). corner = dans un coin. center = centré sur son mur. near / away / facing valent "porte", "fenetre" ou une clé de meuble. seats = nombre de couverts d'une table. chevets = nombre de tables de chevet d'un lit (0 si « sans chevet »). Les chaises d'une table s'expriment par seats, pas par des items chaise. slopes décrit un mur sous rampant (plafond en pente) : jamb = hauteur au pied du rampant en cm (on dit aussi jambette), len = longueur du rampant mesurée le long de la pente en cm, depth = seulement si l'utilisateur donne explicitement une largeur horizontale au sol, deg = pente en degrés ; n'indique que les valeurs données, slopes vide sinon. kallaxH est un KALLAX posé couché (77 cm de haut), adapté sous un rampant. tapis réserve un espace libre au sol (w et d en cm, 120×180 par défaut) : utilise-le pour un tapis, une zone de jeu ou de construction, et mets center à true.
-Si l'utilisateur décrit un usage ou une ambiance (LEGO room, salle de jeux, coin lecture, atelier…) sans lister tous les meubles, compose toi-même une sélection cohérente et raisonnable du catalogue pour cet usage et cette surface (pas plus que la pièce ne peut accueillir), en donnant un label explicite à chaque item (ex. "Table de montage", "Vitrine d'exposition"). Pour une LEGO room : une table de montage (grandBureau, près de la fenêtre), des rangements bas pour les pièces (caisson, kallaxH), des vitrines pour exposer (vitrine), un espace libre au centre (tapis), et garde un bureau si l'utilisateur le demande.
+Si l'utilisateur décrit un usage ou une ambiance (LEGO room, salle de jeux, coin lecture, atelier…) sans lister tous les meubles, compose toi-même une sélection cohérente et raisonnable du catalogue pour cet usage et cette surface (pas plus que la pièce ne peut accueillir), en donnant un label explicite à chaque item (ex. "Table de montage", "Vitrine d'exposition"). La clé table est une table à manger avec ses chaises : ne l'utilise que si l'utilisateur parle de repas ou de s'attabler à plusieurs, jamais pour une table de montage ou de travail (grandBureau). Si l'utilisateur garde ou conserve son bureau, ou dit « un seul bureau », mets uniquement la clé bureau (avec son mur s'il est donné) et aucun grandBureau. Si l'utilisateur dit que l'espace libre ne doit pas être aussi grand, réduis tapis (par exemple 80×120) au lieu de le garder à 120×180. Pour une LEGO room : une table de montage (grandBureau, près de la fenêtre) sauf si l'utilisateur garde son bureau, des rangements bas pour les pièces (caisson, kallaxH), des vitrines pour exposer (vitrine), un espace libre au centre (tapis), et garde un bureau si l'utilisateur le demande.
 Sous un rampant, seuls des meubles plus bas que la hauteur au pied du rampant tiennent contre le mur bas : pour « aménager sous le rampant », mets underSlope sur ces meubles bas uniquement, jamais sur une armoire, une bibliothèque ou une vitrine haute. Si un mur sous rampant est mentionné sans être déjà saisi et sans lettre de mur, ne l'invente pas : signale-le dans comment.
 comment résume en une ou deux phrases en français les choix faits pour l'utilisateur. La chaise du bureau est ajoutée automatiquement. Un meuble refusé (« pas de… ») n'apparaît pas.
 
@@ -1630,6 +1652,7 @@ document.getElementById("wishGo").onclick=async()=>{
     go.disabled=false; stop.hidden=true;
   }
   if(!prog){ const loc=parseWish(text); prog=validateProgram(loc); prog.excluded=loc.excluded; how="local"; }
+  prog=sanitizeProgram(prog,text);
   if(!prog.items.length && (prog.slopes||[]).length){ props=[]; }
   else if(!prog.items.length){ msg.innerHTML=`<div class="status warn">Aucun meuble reconnu. Nommez les meubles (lit, armoire, bureau, canapé, table…) et, si besoin, le mur (« mur B »), la fenêtre ou la porte.</div>`; return; }
   // rampants décrits : enregistrés sur les murs avant l'aménagement
@@ -1975,7 +1998,7 @@ window.addEventListener("resize",()=>render(true));
 renderAll(true);
 if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
 // accès pour les tests
-window.__PP={CAT,proposals,parseWish,validateProgram,describeProgram,runProgram,normalizeScan,scanToRoom,buildGeom,proposals,checkAll,room:()=>room(),S:()=>S,render,applyProp:(r,u)=>{}};
+window.__PP={sanitizeProgram,CAT,proposals,parseWish,validateProgram,describeProgram,runProgram,normalizeScan,scanToRoom,buildGeom,proposals,checkAll,room:()=>room(),S:()=>S,render,applyProp:(r,u)=>{}};
 </script>
 </body>
 </html>
