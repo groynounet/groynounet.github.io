@@ -237,6 +237,11 @@ summary{cursor:pointer;color:var(--accent);font-size:14.5px;padding:4px 0}
     <!-- AMÉNAGER -->
     <section id="tab-amen">
       <h2>Votre aménagement</h2>
+      <div class="grid2 budget">
+        <label class="field">Gamme de prix<select id="bTier"><option value="eco">Petit prix</option><option value="mid">Équilibré</option><option value="lux">Haut de gamme</option></select></label>
+        <label class="field">Budget maximum (€)<input id="bCap" type="number" inputmode="numeric" min="0" step="50" placeholder="Sans limite"></label>
+      </div>
+      <p class="hint" style="margin:4px 0 10px">Les propositions choisissent pour chaque meuble un modèle de la gamme, toutes marques confondues, et restent sous le budget quand c'est possible.</p>
       <label class="field" for="wish">Décrivez ce que vous avez en tête : meubles, murs (lettres du plan), fenêtre, porte, coins.</label>
       <textarea id="wish" rows="4" placeholder="Ex. lit 160 contre le mur C, loin de la porte, avec deux chevets ; bureau sous la fenêtre ; armoire près de la porte ; pas de commode"></textarea>
       <div class="row" style="margin-top:8px">
@@ -339,8 +344,67 @@ const CAT = {
   table:{name:"VIHALS Table extensible 120/180×74",short:"Table",w:120,d:74,h:75,price:129,url:"https://www.ikea.com/fr/fr/p/vihals-table-extensible-blanc-20589777/",kind:"table",clr:{}},
   chaise:{name:"VIHALS Chaise, blanc/Tibbleby",short:"Chaise",w:49,d:55,h:81,price:39.99,url:"https://www.ikea.com/fr/fr/p/vihals-chaise-blanc-tibbleby-beige-gris-30592760/",kind:"chair",clr:{front:0}},
 };
+const PRODUCTS_RAW=[
+["billy:castorama-etagere-bibliotheque-goodhome-", "billy", "Castorama", "Étagère bibliothèque GoodHome Pecan blanche", 73.8, 29.4, 220.0, 74.9, "https://www.castorama.fr/etagere-bibliotheque-blanche-h-220-x-l-73-8-x-p-29-4-cm-goodhome-pecan/5059340983400_CAFR.prd"],
+["billy:castorama-bibliotheque-murale-goodhome-a", "billy", "Castorama", "Bibliothèque murale GoodHome Atomia effet chêne", 150.0, 35.0, 225.0, 182.0, "https://www.castorama.fr/bibliotheque-murale-effect-chene-goodhome-atomia-h-225-x-l-150-x-p-35-cm/5063022621979_CAFR.prd"],
+["billy:castorama-bibliotheque-semi-ouverte-good", "billy", "Castorama", "Bibliothèque semi-ouverte GoodHome Atomia 4 portes 2 tiroirs", 75.0, 37.0, 225.0, 377.0, "https://www.castorama.fr/bibliotheque-semi-ouverte-effet-chene-et-blanche-4-portes-2-tiroirs-goodhome-atomia-h-225-x-l-75-x-p-37-cm/5059340101132_CAFR.prd"],
+["vitrine:castorama-bibliotheque-goodhome-atomia-2", "vitrine", "Castorama", "Bibliothèque GoodHome Atomia 2 portes vitrées", 100.0, 47.0, 225.0, 510.0, "https://www.castorama.fr/bibliotheque-effet-chene-avec-2-portes-vitrees-goodhome-atomia-h-225-x-l-100-x-p-47-cm/5059340100791_CAFR.prd"],
+["kallax:castorama-etagere-8-cubes-goodhome-mixxi", "kallax", "Castorama", "Étagère 8 cubes GoodHome Mixxit blanc", 73.5, 33.0, 142.6, 59.9, "https://www.castorama.fr/etagere-modulable-8-cubes-goodhome-mixxit-blanc-l-73-5cm-x-h-142-6-x-p-33-cm/5059340664859_CAFR.prd"],
+["kallax:castorama-etagere-9-cases-goodhome-atomi", "kallax", "Castorama", "Étagère 9 cases GoodHome Atomia avec 6 portes", 112.5, 37.0, 112.5, 318.0, "https://www.castorama.fr/etagere-semi-ouverte-9-cases-blanche-avec-6-portes-effet-chene-goodhome-atomia-h-112-5-x-l-112-5-x-p-37-cm/5059340101675_CAFR.prd"],
+["kallaxH:castorama-meuble-4-cases-goodhome-atomia", "kallaxH", "Castorama", "Meuble 4 cases GoodHome Atomia effet chêne", 150.0, 35.0, 37.5, 90.0, "https://www.castorama.fr/meuble-de-rangement-4-cases-effet-chene-goodhome-atomia-h-37-5-x-l-150-x-p-35-cm/5059340101286_CAFR.prd"],
+["kallaxH:castorama-etagere-ouverte-goodhome-atomi", "kallaxH", "Castorama", "Étagère ouverte GoodHome Atomia chêne grisé", 200.0, 45.0, 75.0, 240.0, "https://www.castorama.fr/etagere-ouverte-effet-chene-grise-goodhome-atomia-h-75-x-l-200-x-p-45-cm/5059340718859_CAFR.prd"],
+["commode:castorama-commode-3-tiroirs-parisot-neo-", "commode", "Castorama", "Commode 3 tiroirs Parisot Neo blanche", 76.7, 39.9, 76.7, 99.9, "https://www.castorama.fr/commode-3-tiroirs-blanche-sans-poignees-l-76-7-x-h-76-7-x-p-39-9-cm-parisot-neo/3480940225942_CAFR.prd"],
+["commode:castorama-commode-4-tiroirs-goodhome-ato", "commode", "Castorama", "Commode 4 tiroirs GoodHome Atomia effet chêne", 75.0, 45.0, 75.0, 220.0, "https://www.castorama.fr/commode-effet-chene-4-tiroirs-goodhome-atomia-h-75-x-l-75-x-p-45-cm/5059340102450_CAFR.prd"],
+["commode:castorama-commode-6-tiroirs-goodhome-ato", "commode", "Castorama", "Commode 6 tiroirs GoodHome Atomia effet chêne", 75.0, 45.0, 112.5, 304.0, "https://www.castorama.fr/commode-effet-chene-6-tiroirs-goodhome-atomia-h-112-5-x-l-75-x-p-45-cm/5059340102559_CAFR.prd"],
+["commode:castorama-commode-6-tiroirs-scandinave-m", "commode", "Castorama", "Commode 6 tiroirs scandinave métal noir et bois clair", 110.0, 40.0, 75.0, 144.9, "https://www.castorama.fr/mkp/commode-6-tiroirs-style-scandinave-dim-110l-x-40l-x-75h-cm-m-tal-noir-aspect-bois-clair/3662970175422_CAFR.prd"],
+["commode:castorama-chiffonnier-5-tiroirs-tomi-bla", "commode", "Castorama", "Chiffonnier 5 tiroirs TOMI blanc", 60.0, 40.0, 100.0, 79.99, "https://www.castorama.fr/vfp/chiffonnier-5-tiroirs-tomi-60x40x100-cm-commode-semainier-bois-blanc/3662897074136_CAFR.prd"],
+["bureau:la-redoute-bureau-1-tiroir-plaque-chene-", "bureau", "La Redoute", "Bureau 1 tiroir plaqué chêne GRAPHY", 90.0, 47.0, 94.0, 172.69, "https://www.laredoute.fr/ppdp/prod-544529071.aspx"],
+["bureau:vente-unique-bureau-crossline-chene-arti", "bureau", "Vente-unique", "Bureau CROSSLINE chêne artisan 120 cm 2 tiroirs", 120.0, 50.0, 80.5, 138.99, "https://www.vente-unique.com/p/bureau-informatique-industriel-chene-artisan-crossline-120-cm-2-tiroirs-1-etagere-pieds-blancs"],
+["armoire:but-armoire-2-portes-2-tiroirs-daily-imi", "armoire", "But", "Armoire 2 portes 2 tiroirs DAILY imitation chêne", 80.7, 51.4, 185.4, 159.99, "https://www.but.fr/produits/3480940299264/Armoire-2-portes-2-tiroirs-L-80-cm-DAILY-imitation-chene.html"],
+["armoire:but-armoire-2-portes-3-tiroirs-best-blan", "armoire", "But", "Armoire 2 portes 3 tiroirs BEST blanc laqué", 118.5, 60.0, 200.4, 399.99, "https://www.but.fr/produits/5713035079648/Armoire-2-portes-3-tiroirs-L-118-5-cm-BEST-blanc-laque.html"],
+["canape:but-canape-fixe-3-places-sam-tissu-beige", "canape", "But", "Canapé fixe 3 places SAM tissu beige", 197.0, 82.0, 74.0, 399.99, "https://www.but.fr/produits/5945827066042/Canape-fixe-3-places-SAM-tissu-beige.html"],
+["canape:but-canape-fixe-3-places-dario-gris-anth", "canape", "But", "Canapé fixe 3 places DARIO gris anthracite", 182.0, 82.0, 84.0, 199.99, "https://www.but.fr/produits/4894223205375/Canape-fixe-3-places-DARIO-tissu-Gris-anthracite.html"],
+["chevet:but-chevet-1-tiroir-bart-blanc", "chevet", "But", "Chevet 1 tiroir BART blanc", 39.0, 28.0, 41.0, 19.99, "https://www.but.fr/produits/5901738042131/Chevet-1-tiroir-BART-blanc.html"],
+["chevet:but-chevet-1-tiroir-1-niche-andrew-imita", "chevet", "But", "Chevet 1 tiroir 1 niche ANDREW imitation chêne", 52.0, 40.0, 50.0, 99.99, "https://www.but.fr/produits/4894223241564/Chevet-1-tiroir-1-niche-ANDREW-imitation-chene.html"],
+["meubleTV:but-meuble-tv-rondy-imitation-chene-et-b", "meubleTV", "But", "Meuble TV RONDY imitation chêne et blanc", 180.0, 40.0, 47.5, 229.99, "https://www.but.fr/produits/4894223244015/Meuble-TV-L-180-cm-RONDY-imitation-chene-et-blanc.html"],
+["table:but-table-extensible-stanford-160-200-bl", "table", "But", "Table extensible STANFORD 160/200 blanc et miel", 160.0, 80.0, 78.0, 319.99, "https://www.but.fr/produits/3609130017505/Table-extensible-L-160-200-cm-STANFORD-Blanc-miel.html"],
+["canape:la-redoute-interieurs-canape-3-places-ti", "canape", "La Redoute Intérieurs", "Canapé 3 places tissu texturé chiné DANILO", 215.0, 100.0, 76.0, 899.0, "https://www.laredoute.fr/ppdp/prod-602449073.aspx"],
+["canape:am-pm-canape-3-places-velours-botero", "canape", "AM.PM", "Canapé 3 places velours BOTERO", 221.0, 106.0, 80.0, 2900.0, "https://www.laredoute.fr/ppdp/prod-602453583.aspx"],
+["canape:berah-getah-canape-droit-3-places-tissu-", "canape", "Berah Getah", "Canapé droit 3 places tissu texturé EDMOND", 218.0, 102.0, 82.0, 1199.0, "https://www.laredoute.fr/ppdp/prod-602605980.aspx"],
+["lit140:but-lit-140x190-ekko-imitation-chene", "lit140", "But", "Lit 140x190 EKKO imitation chêne", 150.2, 193.0, 70.9, 109.99, "https://www.but.fr/produits/3480940262558/Lit-140x190-cm-EKKO-imitation-chene.html"]
+];
+// Catalogue multi-marques : CAT garde une référence par famille (moteur d'aménagement) ;
+// chaque famille peut avoir d'autres produits (marques, gammes de prix). CAT_BASE = référence d'origine.
+const FAM_LABEL={billy:"Bibliothèque",kallax:"Étagère",kallaxH:"Étagère basse"};
+const PRODUCTS={}, PIDS_BY_FAM={};
+for(const [pid,fam,brand,name,w,d,h,price,url,unit] of PRODUCTS_RAW){ PRODUCTS[pid]={fam,brand,name,w,d,h,price,url,unit}; (PIDS_BY_FAM[fam]=PIDS_BY_FAM[fam]||[]).push(pid); }
 const CAT_GROUP={bed:"Lits",small:"Chambre",wardrobe:"Rangement",chest:"Rangement",shelf:"Rangement",desk:"Bureau",chair:"Sièges",sofa:"Salon",armchair:"Sièges",low:"Salon",tv:"Salon",table:"Repas"};
 for(const [k,c] of Object.entries(CAT)){ c.brand=c.brand||"IKEA"; c.cat=c.cat||(/vitrine/i.test(c.name)?"Exposition":CAT_GROUP[c.kind]||"Divers"); }
+const CAT_BASE={}; for(const k in CAT){ CAT[k].pid=k; CAT_BASE[k]={...CAT[k]}; }
+function prodSpec(fam,pid){
+  const b=CAT_BASE[fam]; if(!b) return null;
+  const p=pid&&pid!==fam&&PRODUCTS[pid]; if(!p) return b;
+  return {...b,name:p.name,short:FAM_LABEL[fam]||b.short,w:p.w,d:p.d,h:p.h,price:p.price,url:p.url,brand:p.brand,unit:p.unit,pid};
+}
+function famProducts(fam){ return [fam,...(PIDS_BY_FAM[fam]||[])].map(pid=>prodSpec(fam,pid)).filter(Boolean).sort((a,b)=>a.price-b.price); }
+function resetCat(){ for(const k in CAT_BASE) CAT[k]={...CAT_BASE[k]}; }
+// choix d'un produit par famille selon la gamme ; la graine varie le choix d'une proposition à l'autre
+const TIERS={eco:"Petit prix",mid:"Équilibré",lux:"Haut de gamme"};
+function pickChoice(tier,seed,forced={}){
+  const rng=mulberry(seed*104729+7), ch={};
+  for(const fam in CAT_BASE){
+    const list=famProducts(fam); if(list.length<2){ ch[fam]=fam; continue; }
+    if(forced[fam]){ ch[fam]=forced[fam]; continue; }
+    const n=list.length, base= tier==="eco"?0 : tier==="lux"?n-1 : Math.floor((n-1)/2);
+    const j= seed===0?0 : Math.round((rng()*2-1)*(seed%3===0?2:1));
+    const i=Math.max(0,Math.min(n-1,base+j));
+    ch[fam]=list[i].pid;
+  }
+  return ch;
+}
+function applyChoice(ch){ for(const fam in ch){ const s=prodSpec(fam,ch[fam]); if(s) CAT[fam]={...s}; } }
+const itemPrice=it=>{ const s=it.custom||prodSpec(it.key,it.pid); return (s&&s.kind!=="rug"&&!it.existing&&s.price)||0; };
+const layoutTotal=items=>Math.round(items.reduce((t,it)=>t+itemPrice(it),0)*100)/100;
 const USAGES = [
   {key:"chambre",label:"Chambre"},
   {key:"enfant",label:"Chambre enfant / amis"},
@@ -524,7 +588,7 @@ function openingZones(room,G){
 
 /* ================= Zones de dégagement d'un meuble ================= */
 function itemZones(f){
-  const c=f.custom||CAT[f.key]||{}; const r=f; const z=[];
+  const c=specOf(f)||{}; const r=f; const z=[];
   if(c.kind==="rug") return z;
   if(c.kind==="bed"){
     const side=c.clr.side, len=r.d-45;
@@ -547,7 +611,7 @@ function itemZones(f){
   }
   return z;
 }
-function specOf(f){ return f.custom||CAT[f.key]; }
+function specOf(f){ return f.custom||(f.key?prodSpec(f.key,f.pid):null); }
 
 /* ================= Contrôles (conflits) ================= */
 function checkAll(room,G){
@@ -871,16 +935,34 @@ function runLayout(room,G,usage,seed){
 }
 function proposals(room,usage){
   const G=buildGeom(room); const out=[]; const seen=new Set();
-  for(let seed=0;seed<36;seed++){
-    const r= typeof usage==="string" ? runLayout(room,G,usage,seed) : runProgram(room,G,usage,seed);
-    const sig=r.items.map(i=>i.key+Math.round(i.cx/10)+","+Math.round(i.cy/10)+","+Math.round(i.a*10)).sort().join("|");
-    if(seen.has(sig)) continue; seen.add(sig); out.push(r);
-  }
-  out.sort((a,b)=>(a.missing.length-b.missing.length)||((a.unmet||[]).length-(b.unmet||[]).length)||(b.score-a.score));
+  const bud=room.budget||{}, tier=TIERS[bud.tier]?bud.tier:"mid", cap=+bud.cap>0?+bud.cap:0;
+  const run=seed=>typeof usage==="string" ? runLayout(room,G,usage,seed) : runProgram(room,G,usage,seed);
+  try{
+    for(let seed=0;seed<36;seed++){
+      const forced={}; let r=null;
+      for(let k=0;k<(cap?12:1);k++){
+        applyChoice(pickChoice(tier,seed,forced)); const t=run(seed); t.total=layoutTotal(t.items);
+        if(!r || t.missing.length<r.missing.length || (t.missing.length===r.missing.length && t.total<r.total)) r=t;
+        if(!cap || t.total<=cap) break;
+        // plafond dépassé : on descend en gamme le meuble le plus cher qui a une version moins chère
+        const byFam={}; t.items.forEach(it=>{ if(!it.custom&&!it.existing&&it.key) byFam[it.key]=(byFam[it.key]||0)+itemPrice(it); });
+        const fams=Object.keys(byFam).sort((a,b)=>byFam[b]-byFam[a]); let moved=false;
+        for(const fam of fams){ const list=famProducts(fam), cur=t.items.find(it=>it.key===fam).pid||fam, i=list.findIndex(p=>p.pid===cur);
+          if(i>0){ forced[fam]=list[i-1].pid; moved=true; break; } }
+        if(!moved) break;
+      }
+      r.over= cap>0 && r.total>cap; r.tier=tier; r.cap=cap;
+      const sig=r.items.map(i=>(i.pid||i.key)+Math.round(i.cx/10)+","+Math.round(i.cy/10)+","+Math.round(i.a*10)).sort().join("|");
+      if(seen.has(sig)) continue; seen.add(sig); out.push(r);
+    }
+  } finally { resetCat(); }
+  // à qualité égale, la gamme départage : petit prix = le moins cher, haut de gamme = le plus soigné
+  const k=tier==="eco"?-0.25:tier==="lux"?0.12:0, val=r=>r.score+k*r.total;
+  out.sort((a,b)=>(a.missing.length-b.missing.length)||((a.unmet||[]).length-(b.unmet||[]).length)||((a.over?1:0)-(b.over?1:0))||(val(b)-val(a)));
   return out.slice(0,8);
 }
 function packLayout(ctx,missing,notes,unmet=[]){
-  const items=ctx.placed.map(p=>{const o={id:p.id,key:p.key,cx:r1(p.cx),cy:r1(p.cy),w:p.w,d:p.d,a:p.a}; if(p.custom)o.custom=p.custom; if(p.existing)o.existing=true; if(p.locked)o.locked=true; if(p.parent)o.parent=p.parent; if(p.side)o.side=p.side; if(p.seats)o.seats=p.seats; if(p.wallMode)o.wallMode=true; return o;});
+  const items=ctx.placed.map(p=>{const o={id:p.id,key:p.key,cx:r1(p.cx),cy:r1(p.cy),w:p.w,d:p.d,a:p.a}; if(p.custom)o.custom=p.custom; else if(p.pid||CAT[p.key]) o.pid=p.pid||CAT[p.key].pid; if(p.existing)o.existing=true; if(p.locked)o.locked=true; if(p.parent)o.parent=p.parent; if(p.side)o.side=p.side; if(p.seats)o.seats=p.seats; if(p.wallMode)o.wallMode=true; return o;});
   const score=ctx.placed.reduce((s,p)=>s+(p._s||0),0)+ctx.placed.filter(p=>!p._kept).length*200-unmet.length*150;
   return {items,missing,notes,unmet,score};
 }
@@ -1886,6 +1968,9 @@ function applyProp(){
     `<div class="status ok">${R.furniture.length} meubles placés, passages et ouvertures dégagés.</div>`;
   if(p.notes&&p.notes.length) msg.innerHTML+=`<div class="status ok">${p.notes.map(esc).join(" ")}</div>`;
   if(p.unmet&&p.unmet.length) msg.innerHTML+=`<div class="status warn">Consignes non tenues :<br>${p.unmet.map(esc).join("<br>")}</div>`;
+  if(p.total!=null){ const lab=`${TIERS[p.tier]||""} · total ${fmtEur(p.total)}`;
+    msg.innerHTML+= p.over? `<div class="status warn">${lab} : au-dessus du budget de ${fmtEur(p.cap)}, même avec les modèles les moins chers qui tiennent dans la pièce. Retirez un meuble ou augmentez le budget.</div>`
+      : `<div class="status ok">${lab}${p.cap?` pour un budget de ${fmtEur(p.cap)}`:""}.</div>`; }
   render(false); renderSel(); renderList();
 }
 document.getElementById("propose").onclick=()=>{
@@ -1906,8 +1991,9 @@ function renderSel(){
   const s=specOf(f), G=buildGeom(R), conf=checkAll(R,G)[f.id]||[];
   const isRug=s.kind==="rug";
   box.innerHTML=`<div class="item sel ${conf.length?"bad":""}" style="margin-top:10px">
-    <div class="row"><div class="flex1"><div class="fname">${esc(s.name)}</div><div class="fmeta">${fmtCm(f.w)} × ${fmtCm(f.d)} × ${s.h||"—"} cm${s.brand&&s.brand!=="IKEA"?" · "+esc(s.brand):""}</div></div><div class="price">${f.existing?"déjà là":fmtEur(s.price)}</div></div>
+    <div class="row"><div class="flex1"><div class="fname">${esc(s.name)}</div><div class="fmeta">${fmtCm(f.w)} × ${fmtCm(f.d)} × ${s.h||"—"} cm${s.brand?" · "+esc(s.brand):""}</div></div><div class="price">${f.existing?"déjà là":fmtEur(s.price)}</div></div>
     ${conf.length?`<div class="status warn">${conf.map(esc).join(" · ")}</div>`:`<div class="status ok">Bien placé.</div>`}
+    ${!f.custom&&f.key&&famProducts(f.key).length>1?`<label class="field" style="margin-top:6px">Changer de modèle (${famProducts(f.key).length} au catalogue)<select id="fModel">${famProducts(f.key).map(p=>`<option value="${esc(p.pid)}" ${p.pid===(f.pid||f.key)?"selected":""}>${esc(fmtEur(p.price))} · ${esc(p.brand)} · ${esc(p.name)} (${fmtCm(p.w)}×${fmtCm(p.d)})</option>`).join("")}</select></label>`:""}
     ${isRug?"":`<div class="selflags">
       <label class="row small"><input type="checkbox" id="fExist" ${f.existing?"checked":""}> Déjà dans la pièce (hors total)</label>
       <label class="row small"><input type="checkbox" id="fLock" ${f.locked||f.existing?"checked":""} ${f.existing?"disabled":""}> Garder à sa place lors des propositions</label>
@@ -1923,6 +2009,8 @@ function renderSel(){
       ${s.url?`<a class="btn" href="${esc(s.url)}" target="_blank" rel="noopener">Fiche produit</a>`:""}
     </div></div>`;
   const kids=()=>R.furniture.filter(k=>k.parent===f.id);
+  const fm=document.getElementById("fModel");
+  if(fm) fm.onchange=()=>{ const p=prodSpec(f.key,fm.value); if(!p) return; f.pid=p.pid; f.w=p.w; f.d=p.d; snapToWalls(f); save(); render(false); renderSel(); renderList(); };
   const ex=document.getElementById("fExist"), lk=document.getElementById("fLock");
   if(ex) ex.onchange=()=>{ f.existing=ex.checked; if(ex.checked) f.locked=true; kids().forEach(k=>{k.existing=f.existing; k.locked=f.locked;}); save(); render(false); renderSel(); renderList(); };
   if(lk) lk.onchange=()=>{ f.locked=lk.checked; kids().forEach(k=>k.locked=f.locked); save(); render(false); renderSel(); };
@@ -1940,10 +2028,10 @@ function renderSel(){
   document.getElementById("rotR").onclick=()=>rot(Math.PI/2);
   document.getElementById("delF").onclick=()=>{ R.furniture=R.furniture.filter(x=>x.id!==f.id && x.parent!==f.id); selId=null; save(); render(false); renderSel(); renderList(); };
 }
-function addFurniture(key,custom){
-  const R=room(), G=buildGeom(R); const s=custom||CAT[key];
+function addFurniture(key,custom,pid){
+  const R=room(), G=buildGeom(R); const s=custom||prodSpec(key,pid);
   const f={id:uid(),key:custom?null:key,cx:r1(G.centroid[0]),cy:r1(G.centroid[1]),w:s.w,d:s.d,a:G.walls[0]?G.walls[0].fa:0};
-  if(custom) f.custom=custom;
+  if(custom) f.custom=custom; else if(pid&&pid!==key) f.pid=pid;
   R.furniture.push(f); selId=f.id; save(); render(false); renderSel(); renderList();
   toast("Meuble ajouté au centre : faites-le glisser à sa place.");
 }
@@ -1953,13 +2041,14 @@ function renderCatalog(){
   if(!document.getElementById("catQ")){ box.insertAdjacentHTML("beforebegin",`<input id="catQ" type="search" placeholder="Chercher : vitrine, TROFAST, bureau, Maisons du Monde…" aria-label="Chercher un meuble" style="width:100%;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:var(--radius-s);padding:9px;font-size:16px;margin-top:8px">`);
     document.getElementById("catQ").oninput=e=>{ catQ=deaccent(e.target.value.trim()); renderCatalog(); }; }
   const groups={};
-  for(const [k,c] of Object.entries(CAT)){
-    if(catQ && !deaccent(`${c.name} ${c.brand} ${c.cat}`).includes(catQ)) continue;
+  for(const k in CAT_BASE) for(const c of famProducts(k)){
+    if(catQ && !deaccent(`${c.name} ${c.brand} ${c.cat} ${c.short}`).includes(catQ)) continue;
     (groups[c.cat]=groups[c.cat]||[]).push([k,c]);
   }
+  for(const g in groups) groups[g].sort((a,b)=>a[1].price-b[1].price);
   const order=["Lits","Chambre","Rangement","Exposition","Bureau","Sièges","Salon","Repas","Divers"];
-  box.innerHTML=order.filter(g=>groups[g]).map(g=>`<h2 style="margin:10px 0 2px;font-size:15px">${g}</h2>`+groups[g].map(([k,c])=>`<div class="item row"><div class="flex1"><div class="fname">${esc(c.name)}</div><div class="fmeta">${c.w} × ${c.d} × ${c.h} cm · ${esc(c.brand)}</div></div><span class="price">${fmtEur(c.price)}</span><button class="btn" data-add="${k}" aria-label="Ajouter ${esc(c.name)}">Ajouter</button></div>`).join("")).join("") || `<p class="hint">Aucun meuble ne correspond. Ajoutez-le comme meuble personnalisé ci-dessous.</p>`;
-  box.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>addFurniture(b.dataset.add));
+  box.innerHTML=order.filter(g=>groups[g]).map(g=>`<h2 style="margin:10px 0 2px;font-size:15px">${g}</h2>`+groups[g].map(([k,c])=>`<div class="item row"><div class="flex1"><div class="fname">${esc(c.name)}</div><div class="fmeta">${c.w} × ${c.d} × ${c.h} cm · ${esc(c.brand)}</div></div><span class="price">${fmtEur(c.price)}</span><button class="btn" data-add="${k}" data-pid="${esc(c.pid)}" aria-label="Ajouter ${esc(c.name)}">Ajouter</button></div>`).join("")).join("") || `<p class="hint">Aucun meuble ne correspond. Ajoutez-le comme meuble personnalisé ci-dessous.</p>`;
+  box.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>addFurniture(b.dataset.add,null,b.dataset.pid));
 }
 document.getElementById("addCustom").onclick=()=>{
   const g=id=>document.getElementById(id).value.trim();
@@ -2003,6 +2092,22 @@ comment résume en une ou deux phrases en français les choix faits pour l'utili
 Description de l'utilisateur :
 """${text.slice(0,2000)}"""`;
 }
+function parseBudget(text){
+  const t=deaccent(text).replace(/(\d)[\s\u202f.](?=\d{3}\b)/g,"$1"), out={};
+  const m=t.match(/budget\D{0,20}?(\d{2,6})/)||t.match(/(?:moins de|max(?:imum)?|pas plus de|jusqu'a)\s*(\d{2,6})\s*(?:€|euros?)/)||t.match(/(\d{2,6})\s*(?:€|euros?)\s*(?:max|maximum|au total|en tout)/);
+  if(m) out.cap=+m[1];
+  if(/pas cher|petit prix|petit budget|economique|bon marche/.test(t)) out.tier="eco";
+  else if(/haut de gamme|luxe|premium|design haut/.test(t)) out.tier="lux";
+  else if(/milieu de gamme|gamme moyenne|equilibre/.test(t)) out.tier="mid";
+  return (out.cap||out.tier)?out:null;
+}
+function renderBudget(){
+  const R=room(), b=R.budget||{};
+  document.getElementById("bTier").value=TIERS[b.tier]?b.tier:"mid";
+  document.getElementById("bCap").value=b.cap>0?b.cap:"";
+}
+document.getElementById("bTier").onchange=e=>{ const R=room(); R.budget={...(R.budget||{}),tier:e.target.value}; props=[]; save(); };
+document.getElementById("bCap").onchange=e=>{ const R=room(), v=Math.round(+String(e.target.value).replace(",",".")); R.budget={...(R.budget||{}),cap:v>0?v:0}; props=[]; save(); renderBudget(); };
 let wishCtl=null;
 document.getElementById("wishGo").onclick=async()=>{
   const R=room(), G=buildGeom(R); const text=document.getElementById("wish").value.trim();
@@ -2046,6 +2151,9 @@ document.getElementById("wishGo").onclick=async()=>{
   if(/rampant|sous pente|mansard|combles/i.test(text) && !R.walls.some(w=>w.slope&&w.slope.on))
     slopeLines.push("Aucun mur n'est encore déclaré sous rampant : cochez-le dans l'onglet Pièce, ou écrivez par exemple « mur A sous rampant, hauteur au pied 100, longueur du rampant 210 ».");
   if(!prog.items.length){ msg.innerHTML=`<div class="status ok"><b>Compris :</b><br>${slopeLines.map(esc).join("<br>")}</div>`; return; }
+  const bw=parseBudget(text);
+  if(bw){ R.budget={...(R.budget||{}),...bw}; save(); renderBudget();
+    slopeLines.push(`Budget : ${TIERS[R.budget.tier||"mid"]}${R.budget.cap>0?", "+fmtEur(R.budget.cap)+" maximum":""}`); }
   props=proposals(R,prog); propIdx=0;
   const lines=[...slopeLines, ...describeProgram(prog)];
   msg.innerHTML=`<div class="status ok"><b>Compris :</b><br>${lines.map(esc).join("<br>")}${prog.comment?`<br><i>${esc(prog.comment)}</i>`:""}</div>`;
@@ -2058,7 +2166,7 @@ document.getElementById("wishStop").onclick=()=>{ if(wishCtl) wishCtl.abort(); }
 function grouped(){
   const R=room(); const m=new Map();
   for(const f of R.furniture){ const s=specOf(f); if(!s||s.kind==="rug") continue; const ex=!!f.existing;
-    const k=(ex?"ex:":"")+(f.custom?"custom:"+s.name+f.w+f.d:f.key); const e=m.get(k)||{s:{...s,w:f.w,d:f.d},n:0,existing:ex}; e.n++; m.set(k,e); }
+    const k=(ex?"ex:":"")+(f.custom?"custom:"+s.name+f.w+f.d:f.key+":"+(f.pid||f.key)); const e=m.get(k)||{s:{...s,w:f.w,d:f.d},n:0,existing:ex}; e.n++; m.set(k,e); }
   // les meubles déjà présents ne comptent ni dans la liste d'achat ni dans le total
   return [...m.values()].filter(g=>!g.existing);
 }
@@ -2069,7 +2177,7 @@ function groupedExisting(){
 }
 function renderList(){
   const g=grouped(), gx=groupedExisting(), box=document.getElementById("flist");
-  const row=({s,n},ex)=>`<div class="item row"><div class="flex1"><div class="fname">${n>1?n+" × ":""}${esc(s.name)}</div><div class="fmeta">${fmtCm(s.w)} × ${fmtCm(s.d)} × ${s.h||"—"} cm${s.brand&&s.brand!=="IKEA"?" · "+esc(s.brand):""}${s.url?` · <a href="${esc(s.url)}" target="_blank" rel="noopener">voir la fiche</a>`:""}</div></div><span class="price">${ex?"déjà là":(s.price!=null?fmtEur(s.price*n):"—")}</span></div>`;
+  const row=({s,n},ex)=>`<div class="item row"><div class="flex1"><div class="fname">${n>1?n+" × ":""}${esc(s.name)}</div><div class="fmeta">${fmtCm(s.w)} × ${fmtCm(s.d)} × ${s.h||"—"} cm${s.brand?" · "+esc(s.brand):""}${s.url?` · <a href="${esc(s.url)}" target="_blank" rel="noopener">voir la fiche</a>`:""}</div></div><span class="price">${ex?"déjà là":(s.price!=null?fmtEur(s.price*n):"—")}</span></div>`;
   const exHtml = gx.length?`<h2 style="margin-top:14px">Déjà dans la pièce</h2>${gx.map(x=>row(x,true)).join("")}`:"";
   if(!g.length){ box.innerHTML=`<p class="hint">Aucun meuble à acheter pour l'instant. Lancez une proposition depuis l'onglet Aménager.</p>`+exHtml; document.getElementById("ftotal").innerHTML=""; renderPrint(); return; }
   box.innerHTML=`<h2>À acheter</h2>`+g.map(x=>row(x,false)).join("")+exHtml;
@@ -2486,7 +2594,7 @@ function renderAll(fit){
   const R=room(); { const h=histOf(R.id); if(h.last==null) h.last=JSON.stringify(R); } updateUndo();
   document.getElementById("wish").value=R.wish||""; document.getElementById("wishMsg").innerHTML="";
   renderRoomSel(); rname.value=R.name; rheight.value=R.height; rthick.value=R.thick||20;
-  renderWalls(); renderOps(); renderObs(); renderUsages(); renderCatalog(); renderSel(); renderList();
+  renderWalls(); renderOps(); renderObs(); renderUsages(); renderBudget(); renderCatalog(); renderSel(); renderList();
   document.getElementById("propnav").hidden=true; document.getElementById("layoutMsg").innerHTML="";
   render(fit);
 }
@@ -2494,7 +2602,7 @@ window.addEventListener("resize",()=>render(true));
 renderAll(true);
 if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
 // accès pour les tests
-window.__PP={scanToRooms,scanFaces,enterHome,leaveHome,sanitizeProgram,CAT,proposals,parseWish,validateProgram,describeProgram,runProgram,normalizeScan,scanToRoom,buildGeom,proposals,checkAll,room:()=>room(),S:()=>S,render,applyProp:(r,u)=>{}};
+window.__PP={pickChoice,applyChoice,resetCat,runLayout,famProducts,prodSpec,scanToRooms,scanFaces,enterHome,leaveHome,sanitizeProgram,CAT,proposals,parseWish,validateProgram,describeProgram,runProgram,normalizeScan,scanToRoom,buildGeom,proposals,checkAll,room:()=>room(),S:()=>S,render,applyProp:(r,u)=>{}};
 </script>
 </body>
 </html>
