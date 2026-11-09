@@ -69,6 +69,7 @@ p.hint{color:var(--ink-soft);font-size:13.5px;margin:4px 0 12px}
 .item.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .item.bad{border-color:var(--warn)}
 .wallrow{display:grid;grid-template-columns:34px 1fr 1fr 36px;gap:8px;align-items:end}
+.sloperow{margin:-2px 0 6px 42px}
 .wallrow .tag{font:600 18px/1 var(--plan-font);color:var(--accent);padding-bottom:10px;text-align:center}
 .iconbtn{border:0;background:none;color:var(--ink-soft);font-size:20px;padding:6px;line-height:1}
 .scanbox{padding:12px}
@@ -272,6 +273,7 @@ const CAT = {
   chaiseB:{name:"MARKUS Chaise de bureau",short:"Chaise",w:62,d:60,h:129,price:199,url:"https://www.ikea.com/fr/fr/p/markus-chaise-de-bureau-vissle-gris-fonce-70261150/",kind:"chair",clr:{front:0}},
   billy:{name:"BILLY Bibliothèque 80×28×202",short:"BILLY",w:80,d:28,h:202,price:59.99,url:"https://www.ikea.com/fr/fr/p/billy-bibliotheque-blanc-20522046/",kind:"shelf",clr:{front:60}},
   kallax:{name:"KALLAX Étagère 77×147",short:"KALLAX",w:77,d:39,h:147,price:59.99,url:"https://www.ikea.com/fr/fr/p/kallax-etagere-blanc-80275887/",kind:"shelf",clr:{front:60}},
+  kallaxH:{name:"KALLAX Étagère 147×77 (posée couchée)",short:"KALLAX couché",w:147,d:39,h:77,price:59.99,url:"https://www.ikea.com/fr/fr/p/kallax-etagere-blanc-80275887/",kind:"shelf",clr:{front:60}},
   canape:{name:"KIVIK Canapé 3 places, Tresund anthracite",short:"Canapé",w:228,d:95,h:83,price:649,url:"https://www.ikea.com/fr/fr/p/kivik-canape-3-places-tresund-anthracite-s09482829/",kind:"sofa",clr:{front:40}},
   fauteuil:{name:"POÄNG Fauteuil, bouleau/Gunnared beige",short:"Fauteuil",w:68,d:82,h:100,price:189,url:"https://www.ikea.com/fr/fr/p/poaeng-fauteuil-plaque-bouleau-gunnared-beige-s59514385/",kind:"armchair",clr:{front:40}},
   tableBasse:{name:"LACK Table basse 90×55",short:"Table basse",w:90,d:55,h:45,price:22.99,url:"https://www.ikea.com/fr/fr/p/-90449905/",kind:"low",clr:{front:0}},
@@ -326,11 +328,32 @@ function buildGeom(room){
   if(area<0) walls.forEach(w=>{w.n=[-w.n[0],-w.n[1]];});
   // angle d'un meuble posé dos au mur, face vers l'intérieur
   walls.forEach(w=>{w.fa=Math.atan2(-w.n[0],w.n[1]);});
+  // rampants : hauteur au pied du mur (jambette) et largeur au sol jusqu'à la hauteur pleine
+  const H=+room.height||250; let hasSlope=false;
+  walls.forEach((w,i)=>{ const sl=ws[i]&&ws[i].slope; if(sl&&sl.on&&+sl.depth>0&&+sl.jamb>=0&&+sl.jamb<H){ w.slope={jamb:+sl.jamb,depth:+sl.depth}; hasSlope=true; } });
   const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
   const bbox={x0:Math.min(...xs),y0:Math.min(...ys),x1:Math.max(...xs),y1:Math.max(...ys)};
   const perim=walls.reduce((s,w)=>s+w.len,0);
-  return {pts,walls,area:Math.abs(area),centroid,bbox,closeErr,perim,end};
+  const G={pts,walls,area:Math.abs(area),centroid,bbox,closeErr,perim,end,H,hasSlope};
+  G.areaHigh = hasSlope ? areaAbove(G,180) : G.area;
+  return G;
 }
+function ceilingAt(G,p){
+  let h=G.H;
+  for(const w of G.walls){ if(!w.slope) continue;
+    const d=Math.max(0,V.dot(V.sub(p,w.A),w.n));
+    h=Math.min(h, w.slope.jamb+(G.H-w.slope.jamb)*Math.min(1,d/w.slope.depth)); }
+  return h;
+}
+function minCeil(G,r){ return Math.min(...corners(r).map(p=>ceilingAt(G,p))); }
+function areaAbove(G,hmin){
+  // surface où la hauteur sous plafond atteint hmin (grille de 2 cm)
+  const st=2; let n=0;
+  for(let x=G.bbox.x0+st/2;x<G.bbox.x1;x+=st) for(let y=G.bbox.y0+st/2;y<G.bbox.y1;y+=st){
+    const p=[x,y]; if(pointInPoly(p,G.pts) && ceilingAt(G,p)>=hmin) n++; }
+  return n*st*st;
+}
+const needsHeadroom=s=>(s.kind==="wardrobe"||(s.kind==="shelf"&&s.h>=150));
 function pointInPoly(p,pts){
   let inside=false;
   for(let i=0,j=pts.length-1;i<pts.length;j=i++){
@@ -446,6 +469,8 @@ function checkAll(room,G){
   for(const f of F){
     const s=specOf(f); const msgs=[];
     if(!insideRoom(f,G)) msgs.push("dépasse des murs");
+    if(G.hasSlope){ const mc=minCeil(G,f); if(mc<(s.h||0)) msgs.push(`trop haut pour le rampant (${fmtCm(s.h)} cm, plafond à ${fmtCm(mc)} cm)`);
+      else if(needsHeadroom(s)){ const z=itemZones(f)[0]; if(z&&ceilingAt(G,[z.cx,z.cy])<180) msgs.push("on ne tient pas debout devant (moins de 1,80 m)"); } }
     for(const z of OZ){
       if(z.kind==="door" && overlap(f,z.r)) msgs.push("gêne l'ouverture d'une porte");
       if(z.kind==="window" && s.h > z.sill-2 && overlap(f,z.r)) msgs.push("masque une fenêtre");
@@ -478,6 +503,10 @@ function fits(ctx,body,zones,opts={}){
   const myRoot=rootId(body,placed);
   if(!insideRoom(body,G)) return false;
   const s=specOf(body);
+  if(G.hasSlope){
+    if(minCeil(G,body)<s.h) return false;
+    if(needsHeadroom(s) && zones[0] && ceilingAt(G,[zones[0].cx,zones[0].cy])<180) return false;
+  }
   for(const z of OZ){
     if(z.kind==="door" && overlap(body,z.r)) return false;
     if(z.kind==="window" && s.h> z.sill-2 && overlap(body,z.r)) return false;
@@ -744,8 +773,8 @@ function packLayout(ctx,missing,notes,unmet=[]){
 
 /* ================= Aménagement décrit en texte libre ================= */
 // Programme : {items:[{key,n,wall,under,near,away,corner,center,facing,seats,chevets,label,w,d,h}]}
-const PROG_KEYS=["lit","litDouble","lit160","lit140","lit90","chevet","armoire","commode","bureau","chaiseB","billy","kallax","canape","fauteuil","tableBasse","meubleTV","table","chaise","custom"];
-const PRIORITY=["lit","litDouble","lit160","lit140","lit90","canape","table","bureau","armoire","commode","meubleTV","billy","kallax","fauteuil","tableBasse","custom","chevet","chaise","chaiseB"];
+const PROG_KEYS=["lit","litDouble","lit160","lit140","lit90","chevet","armoire","commode","bureau","chaiseB","billy","kallax","kallaxH","canape","fauteuil","tableBasse","meubleTV","table","chaise","custom"];
+const PRIORITY=["lit","litDouble","lit160","lit140","lit90","canape","table","bureau","armoire","commode","meubleTV","billy","kallax","kallaxH","fauteuil","tableBasse","custom","chevet","chaise","chaiseB"];
 const SPOTS={porte:"la porte",fenetre:"la fenêtre"};
 function spotPoints(ctx,what){
   if(what==="porte") return ctx.doors;
@@ -791,7 +820,9 @@ function placeWish(ctx,key,req,rng,unmet,label,opts={}){
     if(facingPts.length){ const t=facingPts[0], dir=V.sub(t,p), L=V.len(dir)||1; sc+=V.dot(fy,V.mul(dir,1/L))*80; }
     if(req.center){ const w=ctx.G.walls[c.wall]; sc-=Math.abs(c.off+c.w/2-w.len/2)*0.8; }
     if(req.under) sc-=Math.min(windowCenterGap(ctx,c),300)*0.8;
-    c._strict = (wallIdx<0||c.wall===wallIdx) && (!req.under||underWindow(ctx,c)) && (!req.corner||cornerBonus(c,ctx));
+    const inSlope = ctx.G.hasSlope && minCeil(ctx.G,c) < ctx.G.H-1;
+    if(req.underSlope) sc+= (inSlope?40:0) + (ctx.G.walls[c.wall].slope?80:0);
+    c._strict = (wallIdx<0||c.wall===wallIdx) && (!req.under||underWindow(ctx,c)) && (!req.corner||cornerBonus(c,ctx)) && (!req.underSlope||inSlope);
     c._s=sc; all.push(c);
   }
   const strict=all.filter(c=>c._strict);
@@ -811,6 +842,7 @@ function placeWish(ctx,key,req,rng,unmet,label,opts={}){
     else if(req.wall!=null && wallIdx<0) unmet.push(`${label} : le mur ${String(req.wall).toUpperCase()} n'existe pas dans cette pièce`);
     if(req.under && !underWindow(ctx,placed)) unmet.push(`${label} : impossible sous la fenêtre${spec.h>85?" (trop haut pour l'allège)":""}`);
     if(req.corner && !cornerBonus(placed,ctx)) unmet.push(`${label} : aucun coin libre, posé le long d'un mur`);
+    if(req.underSlope && !(ctx.G.hasSlope && minCeil(ctx.G,placed)<ctx.G.H-1)) unmet.push(`${label} : ${ctx.G.hasSlope?"pas de place sous le rampant":"aucun mur sous rampant n'est défini"}`);
   }
   if(req.near && nearPts.length && minDist(nearPts,[placed.cx,placed.cy])>200) unmet.push(`${label} : pas de place près de ${SPOTS[req.near]||"« "+req.near+" »"}`);
   return placed;
@@ -919,7 +951,7 @@ function parseWish(text){
     if(/commode/.test(c)) push("commode",{n:qty(c,"commodes?")||1});
     if(/\bbureau\b/.test(c) && !/(chaise|fauteuil) de bureau/.test(c)) push("bureau");
     if(/bibliotheque|billy/.test(c)) push("billy",{n:qty(c,"(?:bibliotheques?|billy)")||1});
-    if(/etagere|kallax|rangement/.test(c) && !/bibliotheque/.test(c)) push("kallax",{n:qty(c,"(?:etageres?|kallax|rangements?)")||1});
+    if(/etagere|kallax|rangement/.test(c) && !/bibliotheque/.test(c)) push(/couche|basse|horizontal|allonge/.test(c)?"kallaxH":"kallax",{n:qty(c,"(?:etageres?|kallax|rangements?)")||1});
     if(/canape|sofa/.test(c)) push("canape");
     if(/fauteuil/.test(c) && !/fauteuil de bureau/.test(c)) push("fauteuil",{n:qty(c,"fauteuils?")||1});
     if(/table basse/.test(c)) push("tableBasse");
@@ -943,16 +975,29 @@ function parseWish(text){
     if(/loin (de\s+)?(la |l )?porte/.test(c)) cons.away="porte";
     if(/loin (de\s+)?(la |l )?fenetre/.test(c)) cons.away="fenetre";
     if(/\bcoin\b|\bangle\b/.test(c)) cons.corner=true;
+    if(/sous (le |la |les )?(rampants?|pentes?|combles)/.test(c) && found.length) cons.underSlope=true;
     if(/(au )?centre|au milieu|centre/.test(c)) cons.center=true;
     if((m=c.match(/face (a|au|aux) (la |l )?(fenetre|porte|tele|tv|canape|lit|bureau)/))){ const tg={fenetre:"fenetre",porte:"porte",tele:"meubleTV",tv:"meubleTV",canape:"canape",lit:"lit",bureau:"bureau"}[m[3]]; cons.facing=tg; }
     if(/(sans|pas de|aucun|aucune)\s+(table de )?(chevet|nuit)/.test(c)) { const b=[...items,...found].reverse().find(x=>/^lit/.test(x.key)); if(b) b.chevets=0; excluded.delete("chevet"); }
     if(found.length){ found.forEach((f,i)=>{ if(i===0) Object.assign(f,cons); items.push(f); }); }
     else if(items.length && Object.keys(cons).length) Object.assign(items[items.length-1],cons);
   }
+  // rampants : « mur B sous rampant, jambette de 100, rampant de 180 cm (ou 45°) »
+  const slopes=[];
+  for(const c of clauses){
+    if(!/rampant|sous pente|mansard|sous (les )?combles|plafond (en pente|incline|mansarde)|jambette/.test(c)) continue;
+    let m=c.match(/\bmur\s+([a-h])\b/); let wall=m?m[1].toUpperCase():null;
+    if(!wall && slopes.length) wall=slopes[slopes.length-1].wall;
+    const sl=slopes.find(x=>x.wall===wall&&wall)||{wall};
+    if((m=c.match(/jambette[^\d]{0,12}(\d{2,3})/))) sl.jamb=+m[1];
+    if((m=c.match(/(?:rampant|pente)[^\d]{0,20}(\d{2,3})\s*(?:cm|centimetres)?(?!\s*(?:°|deg))/))) sl.depth=+m[1];
+    if((m=c.match(/(\d{1,2})\s*(?:°|deg)/))) sl.deg=+m[1];
+    if(wall && !slopes.includes(sl)) slopes.push(sl);
+  }
   // fusion des doublons (même meuble cité deux fois)
   const out=[];
   for(const it of items){ const prev=out.find(o=>o.key===it.key && it.key!=="custom"); if(prev){ for(const k in it) if(it[k]!=null && k!=="key" && k!=="n") prev[k]=it[k]; } else out.push(it); }
-  return {items:out.filter(i=>!excluded.has(i.key)), excluded:[...excluded]};
+  return {items:out.filter(i=>!excluded.has(i.key)), excluded:[...excluded], slopes};
 }
 function validateProgram(p){
   const items=[];
@@ -961,14 +1006,23 @@ function validateProgram(p){
     const o={key:r.key};
     if(r.n!=null && isFinite(+r.n)) o.n=Math.max(1,Math.min(6,Math.round(+r.n)));
     if(typeof r.wall==="string" && /^[A-Za-z]$/.test(r.wall)) o.wall=r.wall.toUpperCase();
-    for(const b of ["under","corner","center"]) if(r[b]===true) o[b]=true;
+    for(const b of ["under","corner","center","underSlope"]) if(r[b]===true) o[b]=true;
     for(const k of ["near","away","facing"]) if(typeof r[k]==="string" && (r[k]==="porte"||r[k]==="fenetre"||PROG_KEYS.includes(r[k]))) o[k]=r[k];
     if(r.seats!=null && isFinite(+r.seats)) o.seats=Math.max(2,Math.min(8,Math.round(+r.seats)));
     if(r.chevets!=null && isFinite(+r.chevets)) o.chevets=Math.max(0,Math.min(2,Math.round(+r.chevets)));
     if(r.key==="custom"){ o.name=String(r.name||"Meuble").slice(0,40); for(const k of ["w","d","h"]) if(isFinite(+r[k])&&+r[k]>0) o[k]=Math.min(600,+r[k]); }
     items.push(o);
   }
-  return {items, comment: typeof p?.comment==="string"?p.comment.slice(0,300):""};
+  const slopes=[];
+  for(const sl of (Array.isArray(p?.slopes)?p.slopes:[])){
+    if(!sl||typeof sl.wall!=="string"||!/^[A-Za-z]$/.test(sl.wall)) continue;
+    const o={wall:sl.wall.toUpperCase()};
+    if(isFinite(+sl.jamb)&&+sl.jamb>=0&&+sl.jamb<400) o.jamb=Math.round(+sl.jamb);
+    if(isFinite(+sl.depth)&&+sl.depth>0&&+sl.depth<1000) o.depth=Math.round(+sl.depth);
+    if(isFinite(+sl.deg)&&+sl.deg>5&&+sl.deg<85) o.deg=+sl.deg;
+    slopes.push(o);
+  }
+  return {items, slopes, comment: typeof p?.comment==="string"?p.comment.slice(0,300):""};
 }
 function describeProgram(p){
   const map={porte:"la porte",fenetre:"la fenêtre"};
@@ -976,6 +1030,7 @@ function describeProgram(p){
     const bits=[]; const n=r.n>1?r.n+" × ":"";
     if(r.wall) bits.push("contre le mur "+r.wall);
     if(r.under) bits.push("sous la fenêtre");
+    if(r.underSlope) bits.push("sous le rampant");
     if(r.corner) bits.push("dans un coin");
     if(r.center) bits.push("centré");
     if(r.near) bits.push("près de "+(map[r.near]||labelOf({key:r.near})));
@@ -1088,6 +1143,27 @@ function render(fit){
   s+=`<rect x="-100000" y="-100000" width="200000" height="200000" fill="#fff"/>`;
   s+=`<path d="${pth(outer)} ${pth([...G.pts].reverse())}" fill="#3A4A54" fill-rule="evenodd"/>`;
   s+=`<path d="${pth(G.pts)}" fill="#FAFBFB" stroke="${INK}" stroke-width="${fs*.08}"/>`;
+  if(G.hasSlope){
+    // zone sous 1,80 m hachurée, limite en pointillés
+    s+=`<defs><clipPath id="roomclip"><path d="${pth(G.pts)}"/></clipPath><pattern id="hatch" width="${fs*.7}" height="${fs*.7}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="${fs*.7}" stroke="#AEBBC2" stroke-width="${fs*.07}"/></pattern></defs>`;
+    const big=Math.max(G.bbox.x1-G.bbox.x0,G.bbox.y1-G.bbox.y0)*2;
+    G.walls.forEach((w,i)=>{ if(!w.slope) return;
+      const {jamb,depth}=w.slope;
+      const x180 = jamb>=180?0 : (G.H<=180? big : depth*(180-jamb)/(G.H-jamb));
+      const a=V.sub(w.A,V.mul(w.u,big)), b=V.add(w.B,V.mul(w.u,big));
+      if(x180>0){
+        const a2=V.add(a,V.mul(w.n,x180)), b2=V.add(b,V.mul(w.n,x180));
+        s+=`<polygon points="${[a,b,b2,a2].map(q=>q.join(",")).join(" ")}" fill="url(#hatch)" clip-path="url(#roomclip)"/>`;
+        s+=`<line x1="${a2[0]}" y1="${a2[1]}" x2="${b2[0]}" y2="${b2[1]}" stroke="${DIM}" stroke-width="${fs*.07}" stroke-dasharray="${fs*.5} ${fs*.3}" clip-path="url(#roomclip)"/>`;
+      }
+      // pied du rampant (plafond plein) en pointillé fin
+      const a3=V.add(a,V.mul(w.n,depth)), b3=V.add(b,V.mul(w.n,depth));
+      s+=`<line x1="${a3[0]}" y1="${a3[1]}" x2="${b3[0]}" y2="${b3[1]}" stroke="${SOFT}" stroke-width="${fs*.04}" stroke-dasharray="${fs*.15} ${fs*.25}" clip-path="url(#roomclip)"/>`;
+      let ang=Math.atan2(w.u[1],w.u[0])*180/Math.PI; if(ang>90.5||ang<-89.5) ang+=180;
+      const m1=V.add(V.mul(V.add(w.A,w.B),.5),V.mul(w.n,Math.max(x180,fs*2)+fs*.9));
+      if(x180>0 && x180<big) s+=`<text x="${m1[0]}" y="${m1[1]}" font-size="${fs*.7}" fill="${DIM}" text-anchor="middle" dominant-baseline="middle" font-family="IBM Plex Sans Condensed, Arial Narrow, sans-serif" paint-order="stroke" stroke="#FAFBFB" stroke-width="${fs*.25}" transform="rotate(${ang} ${m1[0]} ${m1[1]})">1,80 m · jambette ${fmtCm(jamb)} · rampant ${fmtCm(depth)}</text>`;
+    });
+  }
   // ouvertures
   for(const op of R.openings){
     const g=opGeom(op,G); if(!g) continue; const w=g.w;
@@ -1146,7 +1222,10 @@ function render(fit){
   svg._fs=fs; svg._G=G;
   if(fit||!view) fitView(G,t,fs);
   applyView();
-  document.getElementById("surface").textContent=`${(G.area/10000).toLocaleString("fr-FR",{maximumFractionDigits:2})} m² · périmètre ${(G.perim/100).toLocaleString("fr-FR",{maximumFractionDigits:2})} m`;
+  const m2=x=>(x/10000).toLocaleString("fr-FR",{maximumFractionDigits:2});
+  document.getElementById("surface").textContent= G.hasSlope
+    ? `${m2(G.area)} m² au sol · ${m2(G.areaHigh)} m² à 1,80 m et plus`
+    : `${m2(G.area)} m² · périmètre ${(G.perim/100).toLocaleString("fr-FR",{maximumFractionDigits:2})} m`;
   document.getElementById("title").textContent=R.name||"Plan Pièce";
 }
 function fitView(G,t,fs){
@@ -1258,8 +1337,26 @@ function renderWalls(){
         <option value="90" ${+w.ang===90?"selected":""}>90° (coin normal)</option>
         <option value="270" ${+w.ang===270?"selected":""}>270° (coin rentrant)</option>
         <option value="other">Autre angle…</option></select></label>`}
-      <button class="iconbtn" data-delw="${i}" aria-label="Supprimer le mur ${LET(i)}" ${R.walls.length<=3?"disabled":""}>×</button></div>`;
-  }).join("");
+      <button class="iconbtn" data-delw="${i}" aria-label="Supprimer le mur ${LET(i)}" ${R.walls.length<=3?"disabled":""}>×</button></div>
+      <div class="sloperow"><label class="row small" style="gap:6px"><input type="checkbox" data-sl="${i}" data-k="on" ${w.slope&&w.slope.on?"checked":""}> Mur ${LET(i)} sous rampant</label>
+      ${w.slope&&w.slope.on?`<div class="grid3" style="margin-top:6px">
+        <label class="field">Jambette (cm)<input type="number" inputmode="decimal" data-sl="${i}" data-k="jamb" value="${w.slope.jamb??100}"></label>
+        <label class="field">Rampant au sol (cm)<input type="number" inputmode="decimal" data-sl="${i}" data-k="depth" value="${w.slope.depth??150}"></label>
+        <label class="field">Pente (°)<input type="number" inputmode="decimal" data-sl="${i}" data-k="deg" value="${slopeDeg(R,w.slope)}"></label>
+      </div>`:""}</div>`;
+  }).join("")+(R.walls.some(w=>w.slope&&w.slope.on)?`<p class="hint">La hauteur sous plafond de la pièce (${R.height} cm) est la hauteur atteinte en haut du rampant. Rampant au sol : distance horizontale entre le pied de la jambette et l'endroit où le plafond devient plat.</p>`:"");
+  box.querySelectorAll("[data-sl]").forEach(el=>el.onchange=()=>{
+    const i=+el.dataset.sl, w=R.walls[i]; w.slope=w.slope||{on:false,jamb:100,depth:150};
+    const H=+R.height||250;
+    if(el.dataset.k==="on") w.slope.on=el.checked;
+    else { const v=parseFloat(String(el.value).replace(",","."));
+      if(!(v>=0)) { renderWalls(); return; }
+      if(el.dataset.k==="jamb"){ if(v>=H){ toast("La jambette doit être plus basse que la hauteur sous plafond."); renderWalls(); return; } w.slope.jamb=v; }
+      if(el.dataset.k==="depth"){ if(v<=0){renderWalls();return;} w.slope.depth=v; }
+      if(el.dataset.k==="deg"){ if(!(v>5&&v<85)){ toast("La pente doit être comprise entre 5° et 85°."); renderWalls(); return; } w.slope.depth=Math.round((H-w.slope.jamb)/Math.tan(v*Math.PI/180)); }
+    }
+    commitGeom();
+  });
   box.querySelectorAll("input[data-w]").forEach(inp=>inp.onchange=()=>{
     const i=+inp.dataset.w, v=parseFloat(inp.value.replace(",","."));
     if(inp.dataset.k==="len"){ if(v>0){R.walls[i].len=r1(v);commitGeom();} }
@@ -1281,6 +1378,7 @@ function renderWalls(){
   else c.innerHTML=`<div class="status warn">Le contour ne se referme pas : écart de ${fmtCm(G.closeErr)} cm au coin 1${Math.abs(sumAng-expected)>=0.5?`, somme des angles ${r1(sumAng)}° au lieu de ${expected}°`:""}. Vérifiez une mesure, ou touchez « Fermer le contour » pour recalculer le dernier mur.</div>`;
 }
 const customAng=new Set();
+function slopeDeg(R,sl){ const H=+R.height||250; return sl&&sl.depth>0? r1(Math.atan((H-sl.jamb)/sl.depth)*180/Math.PI):45; }
 function commitGeom(){ save(); props=[]; renderWalls(); renderOps(); render(true); renderSel(); }
 document.getElementById("addWall").onclick=()=>{room().walls.push({len:100,ang:90}); commitGeom();};
 document.getElementById("closeWall").onclick=()=>{
@@ -1310,7 +1408,7 @@ document.getElementById("mkL").onclick=()=>{
 const qL=document.getElementById("qL"), qW=document.getElementById("qW");
 const rname=document.getElementById("rname"), rheight=document.getElementById("rheight"), rthick=document.getElementById("rthick");
 rname.onchange=()=>{room().name=rname.value.trim()||"Pièce"; save(); renderRoomSel(); render(false);};
-rheight.onchange=()=>{const v=+rheight.value; if(v>0){room().height=v; save(); props=[];}};
+rheight.onchange=()=>{const v=+rheight.value; if(v>0){room().height=v; save(); props=[]; renderWalls(); render(false);}};
 rthick.onchange=()=>{const v=+rthick.value; if(v>=5&&v<=60){room().thick=v; save(); render(true);}};
 
 /* ================= Ouvertures ================= */
@@ -1426,7 +1524,8 @@ let sampleFn=null;
 function roomBrief(R,G){
   const walls=G.walls.map((w,i)=>`mur ${LET(i)} : ${fmtCm(w.len)} cm`).join(" ; ");
   const ops=R.openings.map(o=>`${OPN[o.type]} sur le mur ${LET(+o.wall)} (à ${o.pos} cm du coin ${+o.wall+1}, largeur ${o.width} cm${o.type==="window"?`, allège ${o.sill??90} cm`:""})`).join(" ; ")||"aucune";
-  return `Pièce « ${R.name} », ${(G.area/10000).toFixed(1)} m², hauteur ${R.height} cm. Murs dans le sens horaire : ${walls}. Ouvertures : ${ops}.`;
+  const sl=R.walls.map((w,i)=>w.slope&&w.slope.on?`mur ${LET(i)} sous rampant (jambette ${w.slope.jamb} cm, rampant ${w.slope.depth} cm au sol)`:"").filter(Boolean).join(" ; ");
+  return `Pièce « ${R.name} », ${(G.area/10000).toFixed(1)} m², hauteur sous plafond ${R.height} cm. Murs dans le sens horaire : ${walls}. Ouvertures : ${ops}.${sl?" Rampants déjà saisis : "+sl+".":""}`;
 }
 function wishPrompt(R,G,text){
   const cat=Object.entries(CAT).map(([k,c])=>`${k} = ${c.name} (${c.w}×${c.d}×${c.h} cm)`).join("\n");
@@ -1438,8 +1537,8 @@ ${cat}
 Clés génériques : lit (taille au mieux), litDouble (160 sinon 140), custom (meuble hors catalogue : donne name, w largeur, d profondeur, h hauteur en cm, estimés si non précisés).
 
 Réponds uniquement par un objet JSON de la forme :
-{"items":[{"key":"<clé>","n":1,"wall":"A","under":true,"corner":true,"center":true,"near":"porte","away":"porte","facing":"fenetre","seats":6,"chevets":2}],"comment":"<une phrase en français si une demande est impossible ou ambiguë, sinon vide>"}
-Règles : n'inclus que les meubles demandés ; omets les champs sans consigne. wall = lettre du mur contre lequel poser le meuble. under = sous une fenêtre. corner = dans un coin. center = centré sur son mur. near / away / facing valent "porte", "fenetre" ou une clé de meuble. seats = nombre de couverts d'une table. chevets = nombre de tables de chevet d'un lit (0 si « sans chevet »). Les chaises d'une table s'expriment par seats, pas par des items chaise. La chaise du bureau est ajoutée automatiquement. Un meuble refusé (« pas de… ») n'apparaît pas.
+{"items":[{"key":"<clé>","n":1,"wall":"A","under":true,"underSlope":true,"corner":true,"center":true,"near":"porte","away":"porte","facing":"fenetre","seats":6,"chevets":2}],"slopes":[{"wall":"B","jamb":100,"depth":180,"deg":40}],"comment":"<une phrase en français si une demande est impossible ou ambiguë, sinon vide>"}
+Règles : n'inclus que les meubles demandés ; omets les champs sans consigne. wall = lettre du mur contre lequel poser le meuble. under = sous une fenêtre. underSlope = sous le rampant (partie basse du plafond). corner = dans un coin. center = centré sur son mur. near / away / facing valent "porte", "fenetre" ou une clé de meuble. seats = nombre de couverts d'une table. chevets = nombre de tables de chevet d'un lit (0 si « sans chevet »). Les chaises d'une table s'expriment par seats, pas par des items chaise. slopes décrit un mur sous rampant (plafond en pente) : jamb = hauteur de la jambette en cm, depth = largeur du rampant mesurée au sol en cm, deg = pente en degrés ; n'indique que les valeurs données, slopes vide sinon. kallaxH est un KALLAX posé couché (77 cm de haut), adapté sous un rampant. La chaise du bureau est ajoutée automatiquement. Un meuble refusé (« pas de… ») n'apparaît pas.
 
 Description de l'utilisateur :
 """${text.slice(0,2000)}"""`;
@@ -1466,9 +1565,23 @@ document.getElementById("wishGo").onclick=async()=>{
     go.disabled=false; stop.hidden=true;
   }
   if(!prog){ const loc=parseWish(text); prog=validateProgram(loc); prog.excluded=loc.excluded; how="local"; }
-  if(!prog.items.length){ msg.innerHTML=`<div class="status warn">Aucun meuble reconnu. Nommez les meubles (lit, armoire, bureau, canapé, table…) et, si besoin, le mur (« mur B »), la fenêtre ou la porte.</div>`; return; }
+  if(!prog.items.length && (prog.slopes||[]).length){ props=[]; }
+  else if(!prog.items.length){ msg.innerHTML=`<div class="status warn">Aucun meuble reconnu. Nommez les meubles (lit, armoire, bureau, canapé, table…) et, si besoin, le mur (« mur B »), la fenêtre ou la porte.</div>`; return; }
+  // rampants décrits : enregistrés sur les murs avant l'aménagement
+  const slopeLines=[];
+  for(const sl of (prog.slopes||[])){
+    const i=R.walls.findIndex((w,k)=>LET(k)===sl.wall); if(i<0){ slopeLines.push(`Mur ${sl.wall} : n'existe pas dans cette pièce`); continue; }
+    const w=R.walls[i], H=+R.height||250; const old=w.slope||{jamb:100,depth:150};
+    const jamb = sl.jamb!=null && sl.jamb<H ? sl.jamb : old.jamb;
+    const depth = sl.depth!=null ? sl.depth : (sl.deg!=null ? Math.round((H-jamb)/Math.tan(sl.deg*Math.PI/180)) : old.depth);
+    w.slope={on:true,jamb,depth};
+    const guessed = sl.depth==null && sl.deg==null && !(old&&old.on);
+    slopeLines.push(`Mur ${sl.wall} sous rampant (jambette ${jamb} cm, rampant ${depth} cm au sol${guessed?" — valeur par défaut, à corriger dans l'onglet Pièce":""})`);
+  }
+  if(slopeLines.length){ save(); renderWalls(); render(false); }
+  if(!prog.items.length){ msg.innerHTML=`<div class="status ok"><b>Compris :</b><br>${slopeLines.map(esc).join("<br>")}</div>`; return; }
   props=proposals(R,prog); propIdx=0;
-  const lines=describeProgram(prog);
+  const lines=[...slopeLines, ...describeProgram(prog)];
   msg.innerHTML=`<div class="status ok"><b>Compris :</b><br>${lines.map(esc).join("<br>")}${prog.comment?`<br><i>${esc(prog.comment)}</i>`:""}</div>`;
   if(!props.length){ msg.innerHTML+=`<div class="status warn">Aucun aménagement possible avec ces dimensions.</div>`; return; }
   applyProp();
@@ -1713,10 +1826,13 @@ async function exportPdf(){
     doc.setFont("helvetica","bold"); doc.setFontSize(16); doc.setTextColor(34,49,59); doc.text(R.name||"Pièce",M,y+5); y+=10;
     doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(91,107,117);
     const d=new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
-    const head=`Surface ${(G.area/10000).toLocaleString("fr-FR",{maximumFractionDigits:2})} m`;
-    doc.text(head,M,y); const hx=M+doc.getTextWidth(head);
-    doc.setFontSize(6.5); doc.text("2",hx+0.2,y-1.6); doc.setFontSize(10);
-    doc.text(pdfT(`   ·   périmètre ${(G.perim/100).toLocaleString("fr-FR",{maximumFractionDigits:2})} m   ·   hauteur ${R.height} cm   ·   cotes intérieures en cm   ·   ${d}`),hx+1.6,y); y+=4;
+    const m2=x=>(x/10000).toLocaleString("fr-FR",{maximumFractionDigits:2});
+    const head = G.hasSlope
+      ? `Surface au sol ${m2(G.area)} m²   ·   à 1,80 m et plus ${m2(G.areaHigh)} m²   ·   hauteur ${R.height} cm   ·   cotes intérieures en cm   ·   ${d}`
+      : `Surface ${m2(G.area)} m²   ·   périmètre ${(G.perim/100).toLocaleString("fr-FR",{maximumFractionDigits:2})} m   ·   hauteur ${R.height} cm   ·   cotes intérieures en cm   ·   ${d}`;
+    // jsPDF n'a pas le glyphe « ² » : exposant dessiné à la main
+    let hx=M; pdfT(head).split("m²").forEach((part,k,arr)=>{ doc.text(part,hx,y); hx+=doc.getTextWidth(part); if(k<arr.length-1){ doc.text("m",hx,y); hx+=doc.getTextWidth("m"); doc.setFontSize(6.5); doc.text("2",hx+0.2,y-1.6); doc.setFontSize(10); hx+=1.6; } });
+    y+=4;
     const maxH=150; let iw=PW, ih=iw*png.H/png.W; if(ih>maxH){ ih=maxH; iw=ih*png.W/png.H; }
     doc.addImage(png.dataUrl,"PNG",M+(PW-iw)/2,y,iw,ih); y+=ih+6;
     const g=grouped();
