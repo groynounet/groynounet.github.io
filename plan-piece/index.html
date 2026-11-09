@@ -177,11 +177,11 @@ summary{cursor:pointer;color:var(--accent);font-size:14.5px;padding:4px 0}
           <button class="btn danger" id="delRoom">Supprimer cette pièce</button>
         </div>
         <div class="row" style="margin-top:8px">
-          <button class="btn" id="expPng">Image du plan (PNG)</button>
-          <button class="btn" id="expPdf">PDF / imprimer</button>
+          <button class="btn" data-exp="png">Image du plan (PNG)</button>
+          <button class="btn" data-exp="pdf">PDF du plan et des meubles</button>
         </div>
         <div class="row" style="margin-top:8px">
-          <button class="btn" id="expJson">Sauvegarder la pièce (.json)</button>
+          <button class="btn" data-exp="json">Sauvegarder la pièce (.json)</button>
           <label class="btn">Ouvrir une sauvegarde<input id="impJson" type="file" accept=".json,application/json" hidden></label>
         </div>
         <label class="field" style="margin-top:10px;max-width:220px">Épaisseur des murs dessinés (cm)<input id="rthick" type="number" inputmode="decimal" min="5" max="60"></label>
@@ -246,6 +246,10 @@ summary{cursor:pointer;color:var(--accent);font-size:14.5px;padding:4px 0}
     <section id="tab-liste">
       <div id="flist" class="list"></div>
       <div id="ftotal"></div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn primary" data-exp="pdf">PDF du plan et des meubles</button>
+        <button class="btn" data-exp="png">Image du plan</button>
+      </div>
       <p class="small">Prix relevés sur ikea.com/fr le 9 novembre 2026, éco-participation incluse, hors livraison et montage. Ils peuvent changer : vérifiez sur la fiche avant d'acheter.</p>
     </section>
 
@@ -1679,32 +1683,85 @@ document.getElementById("delRoom").onclick=e=>{
   delArmed=null; b.textContent="Supprimer cette pièce";
   S.rooms=S.rooms.filter(r=>r.id!==S.cur); if(!S.rooms.length) S.rooms.push(defaultRoom()); S.cur=S.rooms[0].id; selId=null; props=[]; save(); renderAll(true);
 };
-document.getElementById("expPdf").onclick=()=>{ selId=null; render(true); renderPrint(); setTimeout(()=>window.print(),150); };
-document.getElementById("expJson").onclick=()=>{
-  const blob=new Blob([JSON.stringify(room(),null,1)],{type:"application/json"});
-  shareOrDownload(blob,(room().name||"piece").replace(/[^\w\-]+/g,"_")+".json");
-};
+const fileBase=()=>(room().name||"piece").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w\-]+/g,"_");
+function planPng(maxSide=2400){
+  return new Promise((ok,ko)=>{
+    selId=null; render(true);
+    const G=svg._G, fs=svg._fs, t=+room().thick||20, m=t+fs*5.5;
+    const vb={x:G.bbox.x0-m,y:G.bbox.y0-m,w:(G.bbox.x1-G.bbox.x0)+2*m,h:(G.bbox.y1-G.bbox.y0)+2*m+fs*2};
+    const scale=Math.min(4, maxSide/Math.max(vb.w,vb.h));
+    const W=Math.round(vb.w*scale), H=Math.round(vb.h*scale);
+    const xml=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}">${svg.innerHTML}<text x="${vb.x+fs}" y="${vb.y+fs*1.6}" font-size="${fs*1.2}" font-family="Arial Narrow, sans-serif" font-weight="600" fill="#22313B">${esc(room().name)} — ${(G.area/10000).toLocaleString("fr-FR",{maximumFractionDigits:2})} m²</text></svg>`;
+    const img=new Image();
+    img.onload=()=>{ const c=document.createElement("canvas"); c.width=W; c.height=H; const x=c.getContext("2d");
+      x.fillStyle="#fff"; x.fillRect(0,0,W,H); x.drawImage(img,0,0,W,H);
+      c.toBlob(b=>b?ok({blob:b,W,H,dataUrl:c.toDataURL("image/png")}):ko(new Error("png")),"image/png"); };
+    img.onerror=()=>ko(new Error("svg"));
+    img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(xml);
+  });
+}
+function loadScript(src){ return new Promise((ok,ko)=>{ if(document.querySelector(`script[src="${src}"]`)&&window.jspdf) return ok(); const sc=document.createElement("script"); sc.src=src; sc.onload=ok; sc.onerror=ko; document.head.appendChild(sc); }); }
+const pdfT=x=>String(x).replace(/[\u202F\u00A0]/g," ");
+async function exportPdf(){
+  const btns=document.querySelectorAll("[data-exp=pdf]"); btns.forEach(b=>b.disabled=true);
+  toast("Préparation du PDF…");
+  try{
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+    const {jsPDF}=window.jspdf; const R=room(), G=buildGeom(R);
+    const png=await planPng(2000);
+    const doc=new jsPDF({unit:"mm",format:"a4"}); const M=14, PW=210-2*M; let y=M;
+    doc.setFont("helvetica","bold"); doc.setFontSize(16); doc.setTextColor(34,49,59); doc.text(R.name||"Pièce",M,y+5); y+=10;
+    doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(91,107,117);
+    const d=new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+    const head=`Surface ${(G.area/10000).toLocaleString("fr-FR",{maximumFractionDigits:2})} m`;
+    doc.text(head,M,y); const hx=M+doc.getTextWidth(head);
+    doc.setFontSize(6.5); doc.text("2",hx+0.2,y-1.6); doc.setFontSize(10);
+    doc.text(pdfT(`   ·   périmètre ${(G.perim/100).toLocaleString("fr-FR",{maximumFractionDigits:2})} m   ·   hauteur ${R.height} cm   ·   cotes intérieures en cm   ·   ${d}`),hx+1.6,y); y+=4;
+    const maxH=150; let iw=PW, ih=iw*png.H/png.W; if(ih>maxH){ ih=maxH; iw=ih*png.W/png.H; }
+    doc.addImage(png.dataUrl,"PNG",M+(PW-iw)/2,y,iw,ih); y+=ih+6;
+    const g=grouped();
+    if(g.length){
+      doc.setFont("helvetica","bold"); doc.setFontSize(12); doc.setTextColor(34,49,59); doc.text("Meubles",M,y); y+=6;
+      doc.setFontSize(9); doc.setTextColor(91,107,117);
+      const cols=[M,M+12,M+118,M+152]; doc.text("Qté",cols[0],y); doc.text("Meuble",cols[1],y); doc.text("L × P × H (cm)",cols[2],y); doc.text("Prix",M+PW,y,{align:"right"}); y+=2;
+      doc.setDrawColor(213,220,224); doc.line(M,y,M+PW,y); y+=5;
+      doc.setFont("helvetica","normal"); doc.setTextColor(34,49,59); doc.setFontSize(9.5);
+      let tot=0;
+      for(const {s,n} of g){
+        if(y>282){ doc.addPage(); y=M+4; }
+        const name=doc.splitTextToSize(s.name,104);
+        doc.text(String(n),cols[0],y); doc.text(name,cols[1],y); doc.text(`${s.w} × ${s.d} × ${s.h||"—"}`,cols[2],y);
+        doc.text(s.price!=null?pdfT(fmtEur(s.price*n)):"—",M+PW,y,{align:"right"});
+        if(s.url){ doc.setTextColor(15,94,115); doc.textWithLink("fiche",cols[1]+Math.min(104,doc.getTextWidth(name[0]))+2,y,{url:s.url}); doc.setTextColor(34,49,59); }
+        tot+=(s.price||0)*n; y+=5*name.length+1.5;
+      }
+      doc.line(M,y-2,M+PW,y-2); y+=3;
+      doc.setFont("helvetica","bold"); doc.text("Total",cols[1],y); doc.text(pdfT(fmtEur(Math.round(tot*100)/100)),M+PW,y,{align:"right"}); y+=6;
+      doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(91,107,117);
+      doc.text("Prix relevés sur ikea.com/fr le 9 novembre 2026, éco-participation incluse, hors livraison et montage ; ils peuvent évoluer.",M,y);
+    }
+    await shareOrDownload(doc.output("blob"),fileBase()+".pdf");
+  }catch(e){
+    if(!framed){ renderPrint(); setTimeout(()=>window.print(),150); }
+    else toast("Le PDF n'a pas pu être préparé : vérifiez la connexion.");
+  }finally{ btns.forEach(b=>b.disabled=false); }
+}
+async function exportPng(){ try{ const p=await planPng(); await shareOrDownload(p.blob,fileBase()+".png"); }catch(e){ toast("L'image n'a pas pu être préparée."); } }
+function exportJson(){ shareOrDownload(new Blob([JSON.stringify(room(),null,1)],{type:"application/json"}),fileBase()+".json"); }
+document.querySelectorAll("[data-exp]").forEach(b=>b.onclick=()=>({pdf:exportPdf,png:exportPng,json:exportJson})[b.dataset.exp]());
 document.getElementById("impJson").onchange=e=>{
   const file=e.target.files[0]; if(!file) return;
   file.text().then(t=>{ const r=JSON.parse(t); if(!Array.isArray(r.walls)) throw 0; r.id=uid(); r.openings=r.openings||[]; r.furniture=r.furniture||[]; S.rooms.push(r); S.cur=r.id; save(); renderAll(true); toast("Pièce importée."); })
    .catch(()=>toast("Ce fichier n'est pas une sauvegarde Plan Pièce."));
   e.target.value="";
 };
-document.getElementById("expPng").onclick=async()=>{
-  selId=null; render(true);
-  const G=svg._G, fs=svg._fs, t=+room().thick||20, m=t+fs*5.5;
-  const vb={x:G.bbox.x0-m,y:G.bbox.y0-m,w:(G.bbox.x1-G.bbox.x0)+2*m,h:(G.bbox.y1-G.bbox.y0)+2*m+fs*2};
-  const scale=Math.min(4, 2400/Math.max(vb.w,vb.h)*1);
-  const W=Math.round(vb.w*scale), H=Math.round(vb.h*scale);
-  const xml=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}">${svg.innerHTML}<text x="${vb.x+fs}" y="${vb.y+fs*1.6}" font-size="${fs*1.2}" font-family="Arial Narrow, sans-serif" font-weight="600" fill="#22313B">${esc(room().name)} — ${(G.area/10000).toLocaleString("fr-FR",{maximumFractionDigits:2})} m²</text></svg>`;
-  const img=new Image(); img.onload=()=>{
-    const c=document.createElement("canvas"); c.width=W; c.height=H; const x=c.getContext("2d");
-    x.fillStyle="#fff"; x.fillRect(0,0,W,H); x.drawImage(img,0,0,W,H);
-    c.toBlob(b=>shareOrDownload(b,(room().name||"plan").replace(/[^\w\-]+/g,"_")+".png"),"image/png");
-  };
-  img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(xml);
-};
+let dl=null;
 async function shareOrDownload(blob,name){
+  if(dl){
+    try{ await dl.save({filename:name,data:blob}); toast("Fichier enregistré."); }
+    catch(e){ if(e&&e.code!=="declined") toast(e&&e.code==="rate_limited"?"Un enregistrement est déjà en cours.":"Enregistrement impossible ici."); }
+    return;
+  }
   try{
     const file=new File([blob],name,{type:blob.type});
     if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:name}); return; }
@@ -1714,9 +1771,12 @@ async function shareOrDownload(blob,name){
 let toastT; function toast(m){const t=document.getElementById("toast"); t.textContent=m; t.classList.add("on"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("on"),2600);}
 
 const framed=(()=>{try{return window.self!==window.top;}catch(e){return true;}})();
-if(framed){ ["expPng","expPdf","expJson"].forEach(id=>{const b=document.getElementById(id); if(b) b.closest(".row").hidden=true;});
-  const n=document.createElement("p"); n.className="small"; n.textContent="Les exports (image, PDF, sauvegarde) fonctionnent dans la version installée sur l'écran d'accueil."; document.getElementById("impJson").closest(".row").after(n);
-  document.getElementById("impJson").closest(".row").hidden=true; }
+if(framed){
+  // dans Claude : les fichiers passent par l'enregistrement proposé par l'app
+  document.querySelectorAll("[data-exp]").forEach(b=>b.hidden=true);
+  (async()=>{ try{ if(window.claude&&typeof window.claude.use==="function") dl=await window.claude.use("downloads"); }catch(e){ dl=null; }
+    if(dl) document.querySelectorAll("[data-exp]").forEach(b=>b.hidden=false); })();
+}
 function renderAll(fit){
   const R=room();
   document.getElementById("wish").value=R.wish||""; document.getElementById("wishMsg").innerHTML="";
