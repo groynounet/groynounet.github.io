@@ -275,6 +275,10 @@ const CAT = {
   billy:{name:"BILLY Bibliothèque 80×28×202",short:"BILLY",w:80,d:28,h:202,price:59.99,url:"https://www.ikea.com/fr/fr/p/billy-bibliotheque-blanc-20522046/",kind:"shelf",clr:{front:60}},
   kallax:{name:"KALLAX Étagère 77×147",short:"KALLAX",w:77,d:39,h:147,price:59.99,url:"https://www.ikea.com/fr/fr/p/kallax-etagere-blanc-80275887/",kind:"shelf",clr:{front:60}},
   kallaxH:{name:"KALLAX Étagère 147×77 (posée couchée)",short:"KALLAX couché",w:147,d:39,h:77,price:59.99,url:"https://www.ikea.com/fr/fr/p/kallax-etagere-blanc-80275887/",kind:"shelf",clr:{front:60}},
+  vitrine:{name:"RUDSTA Vitrine 80×37×120",short:"Vitrine",w:80,d:37,h:120,price:149,url:"https://www.ikea.com/fr/fr/p/rudsta-vitrine-anthracite-50450137/",kind:"shelf",clr:{front:60}},
+  vitrineS:{name:"BAGGEBO Vitrine 34×30×116",short:"Vitrine",w:34,d:30,h:116,price:39.99,url:"https://www.ikea.com/fr/fr/p/baggebo-vitrine-metal-blanc-80502998/",kind:"shelf",clr:{front:60}},
+  caisson:{name:"ALEX Caisson à tiroirs 36×58×70",short:"ALEX",w:36,d:58,h:70,price:79.99,url:"https://www.ikea.com/fr/fr/p/alex-caisson-a-tiroirs-blanc-00473546/",kind:"chest",clr:{front:60}},
+  grandBureau:{name:"LAGKAPTEN / ALEX Bureau 140×60",short:"Bureau 140",w:140,d:60,h:73,price:208.98,url:"https://www.ikea.com/fr/fr/p/lagkapten-alex-bureau-blanc-s99431982/",kind:"desk",clr:{front:80}},
   canape:{name:"KIVIK Canapé 3 places, Tresund anthracite",short:"Canapé",w:228,d:95,h:83,price:649,url:"https://www.ikea.com/fr/fr/p/kivik-canape-3-places-tresund-anthracite-s09482829/",kind:"sofa",clr:{front:40}},
   fauteuil:{name:"POÄNG Fauteuil, bouleau/Gunnared beige",short:"Fauteuil",w:68,d:82,h:100,price:189,url:"https://www.ikea.com/fr/fr/p/poaeng-fauteuil-plaque-bouleau-gunnared-beige-s59514385/",kind:"armchair",clr:{front:40}},
   tableBasse:{name:"LACK Table basse 90×55",short:"Table basse",w:90,d:55,h:45,price:22.99,url:"https://www.ikea.com/fr/fr/p/-90449905/",kind:"low",clr:{front:0}},
@@ -441,6 +445,7 @@ function openingZones(room,G){
 /* ================= Zones de dégagement d'un meuble ================= */
 function itemZones(f){
   const c=CAT[f.key]||f.custom||{}; const r=f; const z=[];
+  if(c.kind==="rug") return z;
   if(c.kind==="bed"){
     const side=c.clr.side, len=r.d-45;
     const zl={cx:0,cy:0,w:side,d:len,a:r.a}, zr={...zl};
@@ -707,6 +712,19 @@ function placeDining(ctx,rng,seats){
   return table;
 }
 
+function placeFree(ctx,spec,rng){
+  const G=ctx.G, out=[];
+  const base=G.walls.reduce((a,b)=>b.len>a.len?b:a).ang;
+  for(const da of [0,Math.PI/2]) for(let x=G.bbox.x0;x<=G.bbox.x1;x+=10) for(let y=G.bbox.y0;y<=G.bbox.y1;y+=10){
+    const t={key:"tapis",custom:spec,cx:x,cy:y,w:spec.w,d:spec.d,a:base+da,id:uid()};
+    if(!fits(ctx,t,[])) continue;
+    // reste à 60 cm des murs pour laisser circuler autour, sinon au mieux
+    const marg=Math.min(...corners(t).map(p=>nearestWallDist(ctx,p)));
+    t._s=-V.dist([x,y],G.centroid)*0.3 + Math.min(marg,60)*0.8 - Math.max(0,120-minDoorDist(ctx,[x,y]))*0.3;
+    out.push(t);
+  }
+  const pick=choose(out,rng,6); return pick?commit(ctx,pick):null;
+}
 function placeDiningWall(ctx,rng){
   const cs=CAT.chaise; const kids=[];
   const t=tryWallItem(ctx,"table",c=>-Math.max(0,150-minDoorDist(ctx,[c.cx,c.cy]))*0.3-V.dist([c.cx,c.cy],ctx.G.centroid)*0.1,rng,8,{wallMode:true,seats:4},tb=>{
@@ -774,8 +792,8 @@ function packLayout(ctx,missing,notes,unmet=[]){
 
 /* ================= Aménagement décrit en texte libre ================= */
 // Programme : {items:[{key,n,wall,under,near,away,corner,center,facing,seats,chevets,label,w,d,h}]}
-const PROG_KEYS=["lit","litDouble","lit160","lit140","lit90","chevet","armoire","commode","bureau","chaiseB","billy","kallax","kallaxH","canape","fauteuil","tableBasse","meubleTV","table","chaise","custom"];
-const PRIORITY=["lit","litDouble","lit160","lit140","lit90","canape","table","bureau","armoire","commode","meubleTV","billy","kallax","kallaxH","fauteuil","tableBasse","custom","chevet","chaise","chaiseB"];
+const PROG_KEYS=["tapis","vitrine","vitrineS","caisson","grandBureau","lit","litDouble","lit160","lit140","lit90","chevet","armoire","commode","bureau","chaiseB","billy","kallax","kallaxH","canape","fauteuil","tableBasse","meubleTV","table","chaise","custom"];
+const PRIORITY=["lit","litDouble","lit160","lit140","lit90","canape","table","grandBureau","bureau","tapis","armoire","commode","meubleTV","billy","vitrine","kallaxH","kallax","vitrineS","caisson","fauteuil","tableBasse","custom","chevet","chaise","chaiseB"];
 const SPOTS={porte:"la porte",fenetre:"la fenêtre"};
 function spotPoints(ctx,what){
   if(what==="porte") return ctx.doors;
@@ -848,7 +866,7 @@ function placeWish(ctx,key,req,rng,unmet,label,opts={}){
   if(req.near && nearPts.length && minDist(nearPts,[placed.cx,placed.cy])>200) unmet.push(`${label} : pas de place près de ${SPOTS[req.near]||"« "+req.near+" »"}`);
   return placed;
 }
-function labelOf(r){ return r.label || (r.key==="custom"?r.name:(CAT[r.key]?.short||({lit:"Lit",litDouble:"Lit double"})[r.key]||r.key)); }
+function labelOf(r){ return r.label || (r.key==="custom"?r.name:(CAT[r.key]?.short||({lit:"Lit",litDouble:"Lit double",tapis:"Espace libre"})[r.key]||r.key)); }
 function runProgram(room,G,prog,seed){
   const rng = seed? mulberry(seed*7919+29):null;
   const ctx=makeCtx(room,G); const missing=[], notes=[], unmet=[];
@@ -870,10 +888,14 @@ function runProgram(room,G,prog,seed){
         const nc = r.chevets!=null ? +r.chevets : (has("chevet")? (+has("chevet").n||(CAT[bed.key].single?1:2)) : (CAT[bed.key].single?1:2));
         if(nc>0){ const got=placeChevets(ctx,bed,nc); if(got.length<nc) unmet.push(`Chevets : ${got.length} sur ${nc} posés à côté du lit`); }
       } else if(r.key==="chevet"){ if(!items.some(x=>/^lit/.test(x.key))){ const it=placeWish(ctx,"chevet",r,rng,unmet,lab); if(!it) missing.push(lab.toLowerCase()); } }
-      else if(r.key==="bureau"){
+      else if(r.key==="bureau"||r.key==="grandBureau"){
         let chair=null; const cs=CAT.chaiseB;
-        const desk=placeWish(ctx,"bureau",r,rng,unmet,lab,{after:d=>(chair=tryRelative(ctx,"chaiseB",d,[{dx:0,dy:d.d/2+cs.d/2+2,da:Math.PI}]))});
+        const desk=placeWish(ctx,r.key,r,rng,unmet,lab,{after:d=>(chair=tryRelative(ctx,"chaiseB",d,[{dx:0,dy:d.d/2+cs.d/2+2,da:Math.PI}]))});
         if(!desk) missing.push(lab.toLowerCase());
+      } else if(r.key==="tapis"){
+        const w=Math.min(400,+r.w||120), d=Math.min(400,+r.d||180);
+        const t=placeFree(ctx,{name:"Tapis / espace libre",short:"Espace libre",w,d,h:1,price:null,url:"",kind:"rug",clr:{}},rng);
+        if(!t) unmet.push(`Espace libre ${w}×${d} cm : pas assez de place au sol`);
       } else if(r.key==="chaiseB"){ /* posée avec le bureau */ }
       else if(r.key==="canape"){
         const sofa=placeWish(ctx,"canape",r,rng,unmet,lab);
@@ -935,12 +957,12 @@ function deaccent(s){ return s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCa
 function parseWish(text){
   const t=" "+deaccent(text).replace(/[’']/g," ")+" ";
   const clauses=t.split(/[.;\n,]| puis | ainsi que | et (?=(?:un|une|des|deux|trois|quatre|cinq|six|le|la|les|l|\d+)\s)/).map(x=>(x||"").trim()).filter(Boolean);
-  const items=[]; const excluded=new Set();
+  const items=[]; const excluded=new Set(); let theme=null, lowUnderSlope=false;
   const qty=(c,word)=>{ const m=c.match(new RegExp("(\\d+|un|une|deux|trois|quatre|cinq|six|sept|huit)\\s+(?:\\w+\\s+)?"+word)); return m?(NUMW[m[1]]||+m[1]||1):null; };
   for(const c of clauses){
     const found=[];
     const negated=word=>new RegExp("\\b(pas de|pas d|sans|aucun|aucune|ni)\\s+(?:\\w+\\s+)?(?:"+word+")").test(c);
-    const WORD={lit:"lits?",chevet:"(?:tables? de (?:chevet|nuit)|chevets?)",armoire:"(?:armoires?|penderies?|dressing|placards?)",commode:"commodes?",bureau:"bureaux?",billy:"(?:bibliotheques?|billy)",kallax:"(?:etageres?|kallax|rangements?)",canape:"(?:canapes?|sofas?)",fauteuil:"fauteuils?",tableBasse:"tables? basses?",meubleTV:"(?:meubles? (?:tv|tele)|tv|tele|television)",table:"tables?",chaise:"chaises?"};
+    const WORD={lit:"lits?",chevet:"(?:tables? de (?:chevet|nuit)|chevets?)",armoire:"(?:armoires?|penderies?|dressing|placards?)",commode:"commodes?",bureau:"bureaux?",billy:"(?:bibliotheques?|billy)",kallax:"(?:etageres?|kallax|rangements?)",canape:"(?:canapes?|sofas?)",fauteuil:"fauteuils?",tableBasse:"tables? basses?",meubleTV:"(?:meubles? (?:tv|tele)|tv|tele|television)",table:"tables?",chaise:"chaises?",vitrine:"vitrines?",caisson:"caissons?",tapis:"(?:tapis|espace)",grandBureau:"(?:table de montage|plan de travail|grand bureau)"};
     const push=(key,extra={})=>{ const wk=/^lit/.test(key)?"lit":key; if(WORD[wk]&&negated(WORD[wk])){ excluded.add(key); return; } found.push({key,...extra}); };
     let m;
     if(/\blits?\b/.test(c) && !/canape.lit/.test(c)){
@@ -951,7 +973,15 @@ function parseWish(text){
     if((m=c.match(/(table[s]? de (?:chevet|nuit)|chevets?)/))) push("chevet",{n:qty(c,"(?:tables? de (?:chevet|nuit)|chevets?)")||null});
     if(/armoire|penderie|dressing|placard/.test(c)) push("armoire",{n:qty(c,"(?:armoires?|penderies?)")||1});
     if(/commode/.test(c)) push("commode",{n:qty(c,"commodes?")||1});
-    if(/\bbureau\b/.test(c) && !/(chaise|fauteuil) de bureau/.test(c)) push("bureau");
+    if(/table de montage|plan de travail|grand bureau|bureau (de )?140|atelier de montage/.test(c)) push("grandBureau");
+    else if(/\bbureau\b/.test(c) && !/(chaise|fauteuil) de bureau/.test(c)) push("bureau");
+    if(/vitrine/.test(c)) push(/petite|etroite|fine/.test(c)?"vitrineS":"vitrine",{n:qty(c,"vitrines?")||1});
+    if(/caisson|bloc[s]? (a |de )?tiroirs/.test(c)) push("caisson",{n:qty(c,"(?:caissons?|blocs?)")||1});
+    if(/\btapis\b|espace (libre|de jeu|de jeux|central|au sol|de construction)/.test(c)){
+      const md=c.match(/(\d{2,3})\s*(?:x|par|sur|\*)\s*(\d{2,3})/); push("tapis",md?{w:+md[1],d:+md[2]}:{});
+    }
+    if(/\blego\b|salle de jeux?|playroom|salle de loisirs?/.test(c)) theme="lego";
+    if(/(amenag|rangements?|meubles?|tout|exploiter|utiliser|profiter).{0,25}sous (le |la |les )?(rampants?|pentes?|combles)/.test(c)) lowUnderSlope=true;
     if(/bibliotheque|billy/.test(c)) push("billy",{n:qty(c,"(?:bibliotheques?|billy)")||1});
     if(/etagere|kallax|rangement/.test(c) && !/bibliotheque/.test(c)) push(/couche|basse|horizontal|allonge/.test(c)?"kallaxH":"kallax",{n:qty(c,"(?:etageres?|kallax|rangements?)")||1});
     if(/canape|sofa/.test(c)) push("canape");
@@ -998,10 +1028,21 @@ function parseWish(text){
     if((m=c.match(/(\d{1,2})\s*(?:°|deg)/))) sl.deg=+m[1];
     if(wall && !slopes.includes(sl)) slopes.push(sl);
   }
+  // usage décrit sans liste complète : sélection cohérente de meubles
+  if(theme==="lego"){
+    const have=k=>items.some(i=>i.key===k);
+    if(!have("grandBureau")&&!have("bureau")) items.push({key:"grandBureau",near:"fenetre",label:"Table de montage"});
+    if(!have("caisson")) items.push({key:"caisson",n:2,label:"Rangement des pièces"});
+    if(!have("kallaxH")&&!have("kallax")) items.push({key:"kallaxH",n:2,underSlope:true,label:"KALLAX couché (bacs de pièces)"});
+    if(!have("vitrine")&&!have("vitrineS")) items.push({key:"vitrine",n:2,label:"Vitrine d'exposition"});
+    if(!have("tapis")) items.push({key:"tapis",w:120,d:180,center:true});
+    lowUnderSlope=true;
+  }
+  if(lowUnderSlope) items.forEach(i=>{ const c=CAT[i.key]; if(c && c.h<=100 && c.kind!=="desk" && c.kind!=="chair" && !i.wall) i.underSlope=true; });
   // fusion des doublons (même meuble cité deux fois)
   const out=[];
   for(const it of items){ const prev=out.find(o=>o.key===it.key && it.key!=="custom"); if(prev){ for(const k in it) if(it[k]!=null && k!=="key" && k!=="n") prev[k]=it[k]; } else out.push(it); }
-  return {items:out.filter(i=>!excluded.has(i.key)), excluded:[...excluded], slopes};
+  return {items:out.filter(i=>!excluded.has(i.key)), excluded:[...excluded], slopes, mentionsSlope:/rampant|sous pente|mansard|combles/.test(t), comment: theme==="lego"?`LEGO room : ${out.some(i=>i.key==="bureau")?"votre bureau":"une table de montage"}, des rangements de pièces bas${lowUnderSlope?" sous le rampant":""}, des vitrines d'exposition et un espace libre au centre. Ajoutez vos maquettes avec leurs dimensions (« le manoir de 97 x 58 ») pour leur réserver une place.`:""};
 }
 function validateProgram(p){
   const items=[];
@@ -1014,6 +1055,8 @@ function validateProgram(p){
     for(const k of ["near","away","facing"]) if(typeof r[k]==="string" && (r[k]==="porte"||r[k]==="fenetre"||PROG_KEYS.includes(r[k]))) o[k]=r[k];
     if(r.seats!=null && isFinite(+r.seats)) o.seats=Math.max(2,Math.min(8,Math.round(+r.seats)));
     if(r.chevets!=null && isFinite(+r.chevets)) o.chevets=Math.max(0,Math.min(2,Math.round(+r.chevets)));
+    if(typeof r.label==="string" && r.label.trim()) o.label=r.label.trim().slice(0,40);
+    if(r.key==="tapis"){ for(const k of ["w","d"]) if(isFinite(+r[k])&&+r[k]>=40) o[k]=Math.min(400,Math.round(+r[k])); }
     if(r.key==="custom"){ o.name=String(r.name||"Meuble").slice(0,40); for(const k of ["w","d","h"]) if(isFinite(+r[k])&&+r[k]>0) o[k]=Math.min(600,+r[k]); }
     items.push(o);
   }
@@ -1027,7 +1070,7 @@ function validateProgram(p){
     if(isFinite(+sl.deg)&&+sl.deg>5&&+sl.deg<85) o.deg=+sl.deg;
     slopes.push(o);
   }
-  return {items, slopes, comment: typeof p?.comment==="string"?p.comment.slice(0,300):""};
+  return {items, slopes, mentionsSlope:!!p?.mentionsSlope, comment: typeof p?.comment==="string"?p.comment.slice(0,400):""};
 }
 function describeProgram(p){
   const map={porte:"la porte",fenetre:"la fenêtre"};
@@ -1044,6 +1087,7 @@ function describeProgram(p){
     if(r.key==="table" && r.seats) bits.push(r.seats+" couverts");
     if(r.chevets===0) bits.push("sans chevet");
     if(r.key==="custom" && r.w) bits.push(`${r.w}×${r.d} cm`);
+    if(r.key==="tapis") return `Espace libre au sol ${r.w||120}×${r.d||180} cm`;
     return n+labelOf(r)+(bits.length?" ("+bits.join(", ")+")":"");
   });
 }
@@ -1090,6 +1134,10 @@ function furnitureSVG(f,fs,bad,sel){
   const L=(x1,y1,x2,y2,extra="")=>{const p=rel(f,x1,y1),q=rel(f,x2,y2);return `<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="${FSTROKE}" stroke-width="${fs*.05}" ${extra}/>`;};
   const R=(x,y,w,d,fill="#fff")=>{const c={cx:0,cy:0,w,d,a:f.a};[c.cx,c.cy]=rel(f,x,y);return `<polygon points="${corners(c).map(p=>p.join(",")).join(" ")}" fill="${fill}" stroke="${FSTROKE}" stroke-width="${fs*.05}"/>`;};
   const k=s.kind;
+  if(k==="rug"){
+    const lab2=`${s.short} ${fmtCm(f.w)}×${fmtCm(f.d)}`; let ang=f.a*180/Math.PI; ang=((ang%360)+360)%360; if(ang>90.5&&ang<269.5) ang+=180;
+    return `<g data-fid="${f.id}" style="cursor:grab"><polygon points="${pts}" fill="#EEF4EF" stroke="${bad?BAD:(sel?DIM:"#7E9C86")}" stroke-width="${sel?fs*.12:fs*.07}" stroke-dasharray="${fs*.45} ${fs*.3}"/><text x="${f.cx}" y="${f.cy}" font-size="${fs*.75}" fill="#4F6B57" text-anchor="middle" dominant-baseline="middle" font-family="IBM Plex Sans Condensed, Arial Narrow, sans-serif" transform="rotate(${ang} ${f.cx} ${f.cy})">${esc(lab2)}</text></g>`;
+  }
   if(k==="bed"){
     const pw = s.single? f.w-24 : (f.w-30)/2;
     if(s.single) deco+=R(0,-f.d/2+24,pw,26); else {deco+=R(-pw/2-5,-f.d/2+24,pw,26)+R(pw/2+5,-f.d/2+24,pw,26);}
@@ -1216,7 +1264,8 @@ function render(fit){
   });
   // meubles
   const conf=checkAll(R,G);
-  const sorted=[...R.furniture].sort((a,b)=>(a.parent?1:0)-(b.parent?1:0));
+  const isRug=f=>(specOf(f)||{}).kind==="rug";
+  const sorted=[...R.furniture].sort((a,b)=>(isRug(b)-isRug(a))||((a.parent?1:0)-(b.parent?1:0)));
   for(const f of sorted) s+=furnitureSVG(f,fs,conf[f.id]&&conf[f.id].length,f.id===selId);
   const sel=R.furniture.find(f=>f.id===selId);
   if(sel) s+=distancesSVG(sel,G,fs);
@@ -1551,7 +1600,10 @@ Clés génériques : lit (taille au mieux), litDouble (160 sinon 140), custom (m
 
 Réponds uniquement par un objet JSON de la forme :
 {"items":[{"key":"<clé>","n":1,"wall":"A","under":true,"underSlope":true,"corner":true,"center":true,"near":"porte","away":"porte","facing":"fenetre","seats":6,"chevets":2}],"slopes":[{"wall":"B","jamb":100,"len":210,"deg":40}],"comment":"<une phrase en français si une demande est impossible ou ambiguë, sinon vide>"}
-Règles : n'inclus que les meubles demandés ; omets les champs sans consigne. wall = lettre du mur contre lequel poser le meuble. under = sous une fenêtre. underSlope = sous le rampant (partie basse du plafond). corner = dans un coin. center = centré sur son mur. near / away / facing valent "porte", "fenetre" ou une clé de meuble. seats = nombre de couverts d'une table. chevets = nombre de tables de chevet d'un lit (0 si « sans chevet »). Les chaises d'une table s'expriment par seats, pas par des items chaise. slopes décrit un mur sous rampant (plafond en pente) : jamb = hauteur au pied du rampant en cm (on dit aussi jambette), len = longueur du rampant mesurée le long de la pente en cm, depth = seulement si l'utilisateur donne explicitement une largeur horizontale au sol, deg = pente en degrés ; n'indique que les valeurs données, slopes vide sinon. kallaxH est un KALLAX posé couché (77 cm de haut), adapté sous un rampant. La chaise du bureau est ajoutée automatiquement. Un meuble refusé (« pas de… ») n'apparaît pas.
+Règles : n'inclus que les meubles demandés ; omets les champs sans consigne. wall = lettre du mur contre lequel poser le meuble. under = sous une fenêtre. underSlope = sous le rampant (partie basse du plafond). corner = dans un coin. center = centré sur son mur. near / away / facing valent "porte", "fenetre" ou une clé de meuble. seats = nombre de couverts d'une table. chevets = nombre de tables de chevet d'un lit (0 si « sans chevet »). Les chaises d'une table s'expriment par seats, pas par des items chaise. slopes décrit un mur sous rampant (plafond en pente) : jamb = hauteur au pied du rampant en cm (on dit aussi jambette), len = longueur du rampant mesurée le long de la pente en cm, depth = seulement si l'utilisateur donne explicitement une largeur horizontale au sol, deg = pente en degrés ; n'indique que les valeurs données, slopes vide sinon. kallaxH est un KALLAX posé couché (77 cm de haut), adapté sous un rampant. tapis réserve un espace libre au sol (w et d en cm, 120×180 par défaut) : utilise-le pour un tapis, une zone de jeu ou de construction, et mets center à true.
+Si l'utilisateur décrit un usage ou une ambiance (LEGO room, salle de jeux, coin lecture, atelier…) sans lister tous les meubles, compose toi-même une sélection cohérente et raisonnable du catalogue pour cet usage et cette surface (pas plus que la pièce ne peut accueillir), en donnant un label explicite à chaque item (ex. "Table de montage", "Vitrine d'exposition"). Pour une LEGO room : une table de montage (grandBureau, près de la fenêtre), des rangements bas pour les pièces (caisson, kallaxH), des vitrines pour exposer (vitrine), un espace libre au centre (tapis), et garde un bureau si l'utilisateur le demande.
+Sous un rampant, seuls des meubles plus bas que la hauteur au pied du rampant tiennent contre le mur bas : pour « aménager sous le rampant », mets underSlope sur ces meubles bas uniquement, jamais sur une armoire, une bibliothèque ou une vitrine haute. Si un mur sous rampant est mentionné sans être déjà saisi et sans lettre de mur, ne l'invente pas : signale-le dans comment.
+comment résume en une ou deux phrases en français les choix faits pour l'utilisateur. La chaise du bureau est ajoutée automatiquement. Un meuble refusé (« pas de… ») n'apparaît pas.
 
 Description de l'utilisateur :
 """${text.slice(0,2000)}"""`;
@@ -1595,6 +1647,8 @@ document.getElementById("wishGo").onclick=async()=>{
     slopeLines.push(`Mur ${sl.wall} sous rampant (hauteur au pied ${jamb} cm, longueur du rampant ${slopeLen(R,w.slope)} cm${guessed?" — valeur par défaut, à corriger dans l'onglet Pièce":""}${bad})`);
   }
   if(slopeLines.length){ save(); renderWalls(); render(false); }
+  if(/rampant|sous pente|mansard|combles/i.test(text) && !R.walls.some(w=>w.slope&&w.slope.on))
+    slopeLines.push("Aucun mur n'est encore déclaré sous rampant : cochez-le dans l'onglet Pièce, ou écrivez par exemple « mur A sous rampant, hauteur au pied 100, longueur du rampant 210 ».");
   if(!prog.items.length){ msg.innerHTML=`<div class="status ok"><b>Compris :</b><br>${slopeLines.map(esc).join("<br>")}</div>`; return; }
   props=proposals(R,prog); propIdx=0;
   const lines=[...slopeLines, ...describeProgram(prog)];
@@ -1607,7 +1661,7 @@ document.getElementById("wishStop").onclick=()=>{ if(wishCtl) wishCtl.abort(); }
 /* ================= Liste & total ================= */
 function grouped(){
   const R=room(); const m=new Map();
-  for(const f of R.furniture){ const s=specOf(f); const k=f.key||("custom:"+s.name+s.w+s.d); const e=m.get(k)||{s,n:0}; e.n++; m.set(k,e); }
+  for(const f of R.furniture){ const s=specOf(f); if(s&&s.kind==="rug") continue; const k=f.key||("custom:"+s.name+s.w+s.d); const e=m.get(k)||{s,n:0}; e.n++; m.set(k,e); }
   return [...m.values()];
 }
 function renderList(){
@@ -1921,7 +1975,7 @@ window.addEventListener("resize",()=>render(true));
 renderAll(true);
 if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
 // accès pour les tests
-window.__PP={proposals,parseWish,validateProgram,describeProgram,runProgram,normalizeScan,scanToRoom,buildGeom,proposals,checkAll,room:()=>room(),S:()=>S,render,applyProp:(r,u)=>{}};
+window.__PP={CAT,proposals,parseWish,validateProgram,describeProgram,runProgram,normalizeScan,scanToRoom,buildGeom,proposals,checkAll,room:()=>room(),S:()=>S,render,applyProp:(r,u)=>{}};
 </script>
 </body>
 </html>
