@@ -414,11 +414,15 @@ const PRODUCTS_RAW=[
 ["armoire:vente-unique-armoire-2-portes-1-tiroir-s", "armoire", "Vente-unique", "Armoire 2 portes 1 tiroir Selma blanc et bois", 90.5, 56.5, 195.0, 429.0, "https://www.vente-unique.com/p/armoire-2-portes-1-tiroir-selma-blanc-et-bois"],
 ["armoire:vente-unique-armoire-2-portes-nova-cache", "armoire", "Vente-unique", "Armoire 2 portes Nova cachemire", 92.0, 53.0, 190.0, 589.0, "https://www.vente-unique.com/p/armoire-2-portes-nova-cachemire"],
 ["vitrine:vente-unique-armoire-vitrine-harty-metal", "vitrine", "Vente-unique", "Armoire vitrine HARTY métal noir 80 cm", 80.0, 35.0, 176.0, 385.29, "https://www.vente-unique.com/p/armoire-a-vitrine-en-acier-noir-harty"],
-["vitrine:vente-unique-vitrine-120-cm-3-portes-gra", "vitrine", "Vente-unique", "Vitrine 120 cm 3 portes graphite noir mat", 120.0, 39.0, 103.0, 247.0, "https://www.vente-unique.com/p/vitrine-large-120-cm-noir-mat"]
+["vitrine:vente-unique-vitrine-120-cm-3-portes-gra", "vitrine", "Vente-unique", "Vitrine 120 cm 3 portes graphite noir mat", 120.0, 39.0, 103.0, 247.0, "https://www.vente-unique.com/p/vitrine-large-120-cm-noir-mat"],
+["caisson:ikea-lennart-caisson-a-tiroirs-blanc", "caisson", "IKEA", "LENNART Caisson à tiroirs blanc", 30.0, 34.0, 56.0, 19.99, "https://www.ikea.com/fr/fr/p/lennart-caisson-a-tiroirs-blanc-30326177"],
+["trofast:ikea-ivar-rangement-sur-roulettes-pin", "trofast", "IKEA", "IVAR Rangement sur roulettes pin", 78.0, 30.0, 37.0, 50.0, "https://www.ikea.com/fr/fr/p/ivar-rangement-sur-roulettes-pin-50484509"],
+["vitrine:but-vitrine-2-portes-avec-led-karla-noir", "vitrine", "But", "Vitrine 2 portes avec LED KARLA noir", 57.6, 32.0, 172.0, 219.99, "https://www.but.fr/produits/4044341256692/Vitrine-2-portes-avec-LED-KARLA-Noir.html"],
+["commode:but-commode-6-tiroirs-pola-120-cm-imitat", "commode", "But", "Commode 6 tiroirs POLA 120 cm imitation chêne", 120.0, 39.7, 85.0, 259.99, "https://www.but.fr/produits/4894223239196/Commode-6-tiroirs-L-120-cm-POLA-imitation-chene.html"]
 ];
 // Catalogue multi-marques : CAT garde une référence par famille (moteur d'aménagement) ;
 // chaque famille peut avoir d'autres produits (marques, gammes de prix). CAT_BASE = référence d'origine.
-const FAM_LABEL={billy:"Bibliothèque",kallax:"Étagère",kallaxH:"Étagère basse"};
+const FAM_LABEL={billy:"Bibliothèque",kallax:"Étagère",kallaxH:"Étagère basse",trofast:"Rangement bas",trofastH:"Rangement à bacs",caisson:"Caisson"};
 const PRODUCTS={}, PIDS_BY_FAM={};
 for(const [pid,fam,brand,name,w,d,h,price,url,unit] of PRODUCTS_RAW){ PRODUCTS[pid]={fam,brand,name,w,d,h,price,url,unit}; (PIDS_BY_FAM[fam]=PIDS_BY_FAM[fam]||[]).push(pid); }
 const CAT_GROUP={bed:"Lits",small:"Chambre",wardrobe:"Rangement",chest:"Rangement",shelf:"Rangement",desk:"Bureau",chair:"Sièges",sofa:"Salon",armchair:"Sièges",low:"Salon",tv:"Salon",table:"Repas"};
@@ -446,6 +450,21 @@ function pickChoice(tier,seed,forced={}){
   return ch;
 }
 function applyChoice(ch){ for(const fam in ch){ const s=prodSpec(fam,ch[fam]); if(s) CAT[fam]={...s}; } }
+// maquettes exposées (MOC, sets LEGO) : posées sur un meuble assez grand et assez bas
+const MOCS={rivendell:{name:"Rivendell",w:72,d:50,h:39}};
+const SUPPORT_FAMS=["tableBasse","kallaxH","commode","trofast","trofastH","caisson","meubleTV","kallax","linnmon","grandBureau","bureau"];
+let CUR_TIER="mid";
+function mocSupports(moc,tier=CUR_TIER){
+  const out=[];
+  for(const fam of SUPPORT_FAMS) if(CAT_BASE[fam]) for(const p of famProducts(fam))
+    if(p.w>=moc.w && p.d>=moc.d && p.h>=30 && p.h<=95 && p.kind!=="rug") out.push({...p,fam});
+  const prices=out.map(p=>p.price).sort((a,b)=>a-b), med=prices[Math.floor(prices.length/2)]||0;
+  // à prix voisin, le meuble le plus bas : la maquette se voit mieux et passe mieux sous un rampant
+  // un meuble bas (table basse, rangement) avant un bureau : la maquette reste à hauteur de regard
+  const low=p=>p.h>60?100000:0;
+  const key= tier==="eco"? p=>low(p)+p.price+p.h : tier==="lux"? p=>low(p)-p.price+p.h : p=>low(p)+Math.abs(p.price-med)+p.h;
+  return out.sort((a,b)=>key(a)-key(b));
+}
 const itemPrice=it=>{ const s=it.custom||prodSpec(it.key,it.pid); return (s&&s.kind!=="rug"&&!it.existing&&s.price)||0; };
 const layoutTotal=items=>Math.round(items.reduce((t,it)=>t+itemPrice(it),0)*100)/100;
 const USAGES = [
@@ -632,6 +651,7 @@ function openingZones(room,G){
 /* ================= Zones de dégagement d'un meuble ================= */
 function itemZones(f){
   const c=specOf(f)||{}; const r=f; const z=[];
+  if(f.moc) return [frontZone(r,50)];
   if(c.kind==="rug") return z;
   if(c.kind==="bed"){
     const side=c.clr.side, len=r.d-45;
@@ -654,7 +674,8 @@ function itemZones(f){
   }
   return z;
 }
-function specOf(f){ return f.custom||(f.key?prodSpec(f.key,f.pid):null); }
+function baseSpec(f){ return f.custom||(f.key?prodSpec(f.key,f.pid):null); }
+function specOf(f){ const b=baseSpec(f); return (b&&f.moc)? {...b,h:(b.h||0)+f.moc.h,clr:{front:50}} : b; }
 
 /* ================= Contrôles (conflits) ================= */
 function checkAll(room,G){
@@ -978,7 +999,7 @@ function runLayout(room,G,usage,seed){
 }
 function proposals(room,usage){
   const G=buildGeom(room); const out=[]; const seen=new Set();
-  const bud=room.budget||{}, tier=TIERS[bud.tier]?bud.tier:"mid", cap=+bud.cap>0?+bud.cap:0;
+  const bud=room.budget||{}, tier=TIERS[bud.tier]?bud.tier:"mid", cap=+bud.cap>0?+bud.cap:0; CUR_TIER=tier;
   const run=seed=>typeof usage==="string" ? runLayout(room,G,usage,seed) : runProgram(room,G,usage,seed);
   try{
     for(let seed=0;seed<36;seed++){
@@ -1005,15 +1026,15 @@ function proposals(room,usage){
   return out.slice(0,8);
 }
 function packLayout(ctx,missing,notes,unmet=[]){
-  const items=ctx.placed.map(p=>{const o={id:p.id,key:p.key,cx:r1(p.cx),cy:r1(p.cy),w:p.w,d:p.d,a:p.a}; if(p.custom)o.custom=p.custom; else if(p.pid||CAT[p.key]) o.pid=p.pid||CAT[p.key].pid; if(p.existing)o.existing=true; if(p.locked)o.locked=true; if(p.parent)o.parent=p.parent; if(p.side)o.side=p.side; if(p.seats)o.seats=p.seats; if(p.wallMode)o.wallMode=true; return o;});
+  const items=ctx.placed.map(p=>{const o={id:p.id,key:p.key,cx:r1(p.cx),cy:r1(p.cy),w:p.w,d:p.d,a:p.a}; if(p.custom)o.custom=p.custom; else if(p.pid||CAT[p.key]) o.pid=p.pid||CAT[p.key].pid; if(p.moc)o.moc=p.moc; if(p.existing)o.existing=true; if(p.locked)o.locked=true; if(p.parent)o.parent=p.parent; if(p.side)o.side=p.side; if(p.seats)o.seats=p.seats; if(p.wallMode)o.wallMode=true; return o;});
   const score=ctx.placed.reduce((s,p)=>s+(p._s||0),0)+ctx.placed.filter(p=>!p._kept).length*200-unmet.length*150;
   return {items,missing,notes,unmet,score};
 }
 
 /* ================= Aménagement décrit en texte libre ================= */
 // Programme : {items:[{key,n,wall,under,near,away,corner,center,facing,seats,chevets,label,w,d,h}]}
-const PROG_KEYS=["trofast","trofastH","trofastS","ivarB","ivarH","fabrikor","linnmon","metos","adelaide","tapis","vitrine","vitrineS","caisson","grandBureau","lit","litDouble","lit160","lit140","lit90","chevet","armoire","commode","bureau","chaiseB","billy","kallax","kallaxH","canape","fauteuil","tableBasse","meubleTV","table","chaise","custom"];
-const PRIORITY=["lit","litDouble","lit160","lit140","lit90","grandBureau","bureau","canape","table","tapis","armoire","commode","meubleTV","billy","vitrine","fabrikor","adelaide","ivarH","kallaxH","kallax","ivarB","trofastH","trofast","metos","vitrineS","trofastS","caisson","linnmon","fauteuil","tableBasse","custom","chevet","chaise","chaiseB"];
+const PROG_KEYS=["moc","trofast","trofastH","trofastS","ivarB","ivarH","fabrikor","linnmon","metos","adelaide","tapis","vitrine","vitrineS","caisson","grandBureau","lit","litDouble","lit160","lit140","lit90","chevet","armoire","commode","bureau","chaiseB","billy","kallax","kallaxH","canape","fauteuil","tableBasse","meubleTV","table","chaise","custom"];
+const PRIORITY=["lit","litDouble","lit160","lit140","lit90","grandBureau","bureau","moc","canape","table","tapis","armoire","commode","meubleTV","billy","vitrine","fabrikor","adelaide","ivarH","kallaxH","kallax","ivarB","trofastH","trofast","metos","vitrineS","trofastS","caisson","linnmon","fauteuil","tableBasse","custom","chevet","chaise","chaiseB"];
 const SPOTS={porte:"la porte",fenetre:"la fenêtre"};
 function spotPoints(ctx,what){
   if(what==="porte") return ctx.doors;
@@ -1086,7 +1107,7 @@ function placeWish(ctx,key,req,rng,unmet,label,opts={}){
   if(req.near && nearPts.length && minDist(nearPts,[placed.cx,placed.cy])>200) unmet.push(`${label} : pas de place près de ${SPOTS[req.near]||"« "+req.near+" »"}`);
   return placed;
 }
-function labelOf(r){ return r.label || (r.key==="custom"?r.name:(CAT[r.key]?.short||({lit:"Lit",litDouble:"Lit double",tapis:"Espace libre"})[r.key]||r.key)); }
+function labelOf(r){ return r.label || ((r.key==="custom"||r.key==="moc")?r.name:(CAT[r.key]?.short||({lit:"Lit",litDouble:"Lit double",tapis:"Espace libre"})[r.key]||r.key)); }
 function runProgram(room,G,prog,seed){
   const rng = seed? mulberry(seed*7919+29):null;
   const ctx=makeCtx(room,G); const missing=[], notes=[], unmet=[];
@@ -1120,6 +1141,7 @@ function runProgram(room,G,prog,seed){
         let chair=null; const cs=CAT.chaiseB;
         const desk=placeWish(ctx,r.key,r,rng,unmet,lab,{after:d=>(chair=tryRelative(ctx,"chaiseB",d,[{dx:0,dy:d.d/2+cs.d/2+2,da:Math.PI}]))});
         if(!desk) missing.push(lab.toLowerCase());
+        else if(r.existing){ desk.existing=true; desk.locked=true; desk.pid=r.key; desk.w=CAT_BASE[r.key].w; desk.d=CAT_BASE[r.key].d; if(chair){ chair.existing=true; chair.locked=true; chair.pid="chaiseB"; } }
       } else if(r.key==="tapis"){
         const w=Math.min(400,+r.w||120), d=Math.min(400,+r.d||180);
         const t=placeFree(ctx,{name:"Tapis / espace libre",short:"Espace libre",w,d,h:1,price:null,url:"",kind:"rug",clr:{}},rng);
@@ -1159,6 +1181,13 @@ function runProgram(room,G,prog,seed){
         }
         if(!arm) arm=placeWish(ctx,"fauteuil",r,rng,unmet,lab);
         if(!arm) missing.push(lab.toLowerCase());
+      } else if(r.key==="moc"){
+        const moc={name:r.name||"Maquette",w:+r.w,d:+r.d,h:+r.h||40};
+        if(!(moc.w>0&&moc.d>0)){ missing.push(lab.toLowerCase()+" (dimensions inconnues)"); continue; }
+        const sups=mocSupports(moc); if(rng&&sups.length>2){ const j=Math.floor(rng()*3); [sups[0],sups[j]]=[sups[j],sups[0]]; }
+        let it=null;
+        for(const sp of sups.slice(0,8)){ it=placeWish(ctx,sp.fam,r,rng,unmet,lab,{spec:{...sp,h:sp.h+moc.h,clr:{front:50}},extra:{pid:sp.pid,moc}}); if(it) break; }
+        if(!it) missing.push(`${lab} (aucun meuble d'exposition d'au moins ${moc.w}×${moc.d} cm ne tient)`);
       } else if(r.key==="custom"){
         const w=+r.w, d=+r.d; if(!(w>0&&d>0)) { missing.push(lab.toLowerCase()+" (dimensions inconnues)"); continue; }
         const spec={name:r.name||"Meuble",short:r.name||"Meuble",w,d,h:+r.h||80,price:null,url:"",kind:"custom",clr:{front:60}};
@@ -1224,10 +1253,16 @@ function parseWish(text){
       push("table",{seats});
     }
     if(/\bchaises?\b/.test(c) && !/\btable\b/.test(c) && !/chaise de bureau/.test(c)) push("chaise",{n:qty(c,"chaises?")||4});
+    // maquettes / sets exposés : « Rivendell surélevé de 15 cm », « la maquette de 97 x 58 x 78 »
+    for(const k in MOCS) if(new RegExp("\\b"+k).test(c)){
+      const mo={key:"moc",...MOCS[k]}; if((m=c.match(/sureleve\w*\D{0,20}?(\d{1,3})\s*cm/))){ mo.h+= +m[1]; mo.name+=` (surélevé de ${m[1]} cm)`; }
+      found.push(mo);
+    }
     // meuble hors catalogue avec ses dimensions : « un piano de 150 x 60 », « un buffet 160x45x90 »
     if((m=c.match(/\b(?:un|une|le|la|mon|ma)\s+([a-z]+(?:\s(?!de\b)[a-z]+)?)\s+(?:de\s+)?(\d{2,3})\s*(?:x|par|sur|\*)\s*(\d{2,3})(?:\s*(?:x|par|sur|\*)\s*(\d{2,3}))?/))){
       const nm=m[1].trim(); const known=Object.values(WORD).some(wr=>new RegExp("^(?:"+wr+")").test(nm));
-      if(!known) found.push({key:"custom",name:nm.charAt(0).toUpperCase()+nm.slice(1),w:+m[2],d:+m[3],h:m[4]?+m[4]:80});
+      const isMoc=/maquette|moc|set|diorama|manoir|chateau|vaisseau|ville|lego/.test(nm);
+      if(!known) found.push({key:isMoc?"moc":"custom",name:nm.charAt(0).toUpperCase()+nm.slice(1),w:+m[2],d:+m[3],h:m[4]?+m[4]:(isMoc?40:80)});
     }
     // consignes de la proposition
     const cons={};
@@ -1290,7 +1325,9 @@ function validateProgram(p){
     if(r.seats!=null && isFinite(+r.seats)) o.seats=Math.max(2,Math.min(8,Math.round(+r.seats)));
     if(r.chevets!=null && isFinite(+r.chevets)) o.chevets=Math.max(0,Math.min(2,Math.round(+r.chevets)));
     if(typeof r.label==="string" && r.label.trim()) o.label=r.label.trim().slice(0,40);
+    if(r.existing===true) o.existing=true;
     if(r.key==="tapis"){ for(const k of ["w","d"]) if(isFinite(+r[k])&&+r[k]>=40) o[k]=Math.min(400,Math.round(+r[k])); }
+    if(r.key==="moc"){ o.name=String(r.name||"Maquette").slice(0,40); for(const k of ["w","d","h"]) if(isFinite(+r[k])&&+r[k]>0) o[k]=Math.min(300,+r[k]); }
     if(r.key==="custom"){ o.name=String(r.name||"Meuble").slice(0,40); for(const k of ["w","d","h"]) if(isFinite(+r[k])&&+r[k]>0) o[k]=Math.min(600,+r[k]); }
     items.push(o);
   }
@@ -1317,6 +1354,8 @@ function sanitizeProgram(prog,text){
   }
   // « un seul bureau », « en gardant / conservant mon bureau » : pas de second plan de travail
   if(/seul bureau|un bureau seulement|(garder|gardant|conserver|conservant|garde|conserve)\s+(le |mon |un |ce )?bureau/.test(t) && items.some(i=>i.key==="bureau") ) items=items.filter(i=>i.key!=="grandBureau");
+  // bureau gardé : il est déjà là, il ne s'achète pas
+  if(/(garder|gardant|conserver|conservant|garde|conserve)\s+(le |mon |ce )?bureau/.test(t)) items=items.map(i=>i.key==="bureau"?{...i,existing:true}:i);
   if(/seul bureau/.test(t)){ let seen=false; items=items.filter(i=>{ if(i.key!=="bureau"&&i.key!=="grandBureau") return true; if(seen) return false; seen=true; i.n=1; return true; }); }
   // espace libre : « pas aussi grand », « plus petit » → réduit ; « pas d'espace libre » → supprimé
   if(/(pas|moins|plus petit|reduit).{0,25}(espace|tapis).{0,30}(aussi grand|si grand|plus petit|moins grand|trop grand)|(espace|tapis).{0,20}(plus petit|moins grand|reduit)/.test(t)){
@@ -1339,7 +1378,9 @@ function describeProgram(p){
     if(r.facing) bits.push("face à "+(map[r.facing]||labelOf({key:r.facing})));
     if(r.key==="table" && r.seats) bits.push(r.seats+" couverts");
     if(r.chevets===0) bits.push("sans chevet");
+    if(r.existing) bits.push("déjà dans la pièce, hors budget");
     if(r.key==="custom" && r.w) bits.push(`${r.w}×${r.d} cm`);
+    if(r.key==="moc") bits.unshift(`${r.w}×${r.d} cm, ${r.h} cm de haut, sur un meuble d'exposition`);
     if(r.key==="tapis") return `Espace libre au sol ${r.w||120}×${r.d||180} cm`;
     return n+labelOf(r)+(bits.length?" ("+bits.join(", ")+")":"");
   });
@@ -1428,9 +1469,10 @@ function furnitureSVG(f,fs,bad,sel){
   } else if(k==="desk"||k==="chest"||k==="tv"){
     deco+=L(-f.w/2,-f.d/2+3,f.w/2,-f.d/2+3,'stroke-opacity=".5"');
   }
+  if(f.moc){ const mw=Math.min(f.moc.w,f.w), md=Math.min(f.moc.d,f.d); deco+=R(0,0,mw,md,"#F1E6CC"); }
   // libellé
   let label="";
-  const lab=s.short||s.name;
+  const lab=f.moc? f.moc.name.replace(/\s*\(.*\)$/,"") : (s.short||s.name);
   const tf=Math.min(fs*.82, f.w/ (lab.length*0.5+1), f.d*0.42);
   const showLab = tf>fs*0.42 && k!=="chair" && k!=="small";
   if(showLab){
@@ -2036,7 +2078,9 @@ function renderSel(){
   box.innerHTML=`<div class="item sel ${conf.length?"bad":""}" style="margin-top:10px">
     <div class="row"><div class="flex1"><div class="fname">${esc(s.name)}</div><div class="fmeta">${fmtCm(f.w)} × ${fmtCm(f.d)} × ${s.h||"—"} cm${s.brand?" · "+esc(s.brand):""}</div></div><div class="price">${f.existing?"déjà là":fmtEur(s.price)}</div></div>
     ${conf.length?`<div class="status warn">${conf.map(esc).join(" · ")}</div>`:`<div class="status ok">Bien placé.</div>`}
-    ${!f.custom&&f.key&&famProducts(f.key).length>1?`<label class="field" style="margin-top:6px">Changer de modèle (${famProducts(f.key).length} au catalogue)<select id="fModel">${famProducts(f.key).map(p=>`<option value="${esc(p.pid)}" ${p.pid===(f.pid||f.key)?"selected":""}>${esc(fmtEur(p.price))} · ${esc(p.brand)} · ${esc(p.name)} (${fmtCm(p.w)}×${fmtCm(p.d)})</option>`).join("")}</select></label>`:""}
+    ${f.moc?`<div class="status ok">Support de « ${esc(f.moc.name)} » (${fmtCm(f.moc.w)} × ${fmtCm(f.moc.d)} cm, ${fmtCm(f.moc.h)} cm de haut) : hauteur totale ${fmtCm(s.h)} cm.</div>`:""}
+    ${f.moc?`<label class="field" style="margin-top:6px">Changer de meuble d'exposition (${mocSupports(f.moc).length} assez grands)<select id="fSup">${mocSupports(f.moc).slice().sort((a,b)=>a.price-b.price).map(p=>`<option value="${esc(p.fam+"|"+p.pid)}" ${p.pid===(f.pid||f.key)?"selected":""}>${esc(fmtEur(p.price))} · ${esc(p.brand)} · ${esc(p.name)} (${fmtCm(p.w)}×${fmtCm(p.d)}×${fmtCm(p.h)})</option>`).join("")}</select></label>`:""}
+    ${!f.moc&&!f.custom&&f.key&&famProducts(f.key).length>1?`<label class="field" style="margin-top:6px">Changer de modèle (${famProducts(f.key).length} au catalogue)<select id="fModel">${famProducts(f.key).map(p=>`<option value="${esc(p.pid)}" ${p.pid===(f.pid||f.key)?"selected":""}>${esc(fmtEur(p.price))} · ${esc(p.brand)} · ${esc(p.name)} (${fmtCm(p.w)}×${fmtCm(p.d)})</option>`).join("")}</select></label>`:""}
     ${isRug?"":`<div class="selflags">
       <label class="row small"><input type="checkbox" id="fExist" ${f.existing?"checked":""}> Déjà dans la pièce (hors total)</label>
       <label class="row small"><input type="checkbox" id="fLock" ${f.locked||f.existing?"checked":""} ${f.existing?"disabled":""}> Garder à sa place lors des propositions</label>
@@ -2053,6 +2097,8 @@ function renderSel(){
     </div></div>`;
   const kids=()=>R.furniture.filter(k=>k.parent===f.id);
   const fm=document.getElementById("fModel");
+  const fsup=document.getElementById("fSup");
+  if(fsup) fsup.onchange=()=>{ const [fam,pid]=fsup.value.split("|"); const p=prodSpec(fam,pid); if(!p) return; f.key=fam; f.pid=pid; f.w=p.w; f.d=p.d; snapToWalls(f); save(); render(false); renderSel(); renderList(); };
   if(fm) fm.onchange=()=>{ const p=prodSpec(f.key,fm.value); if(!p) return; f.pid=p.pid; f.w=p.w; f.d=p.d; snapToWalls(f); save(); render(false); renderSel(); renderList(); };
   const ex=document.getElementById("fExist"), lk=document.getElementById("fLock");
   if(ex) ex.onchange=()=>{ f.existing=ex.checked; if(ex.checked) f.locked=true; kids().forEach(k=>{k.existing=f.existing; k.locked=f.locked;}); save(); render(false); renderSel(); renderList(); };
@@ -2123,7 +2169,7 @@ ${roomBrief(R,G)}
 
 Catalogue (clé = meuble) :
 ${cat}
-Clés génériques : lit (taille au mieux), litDouble (160 sinon 140), custom (meuble hors catalogue : donne name, w largeur, d profondeur, h hauteur en cm, estimés si non précisés).
+Clés génériques : lit (taille au mieux), litDouble (160 sinon 140), custom (meuble hors catalogue : donne name, w largeur, d profondeur, h hauteur en cm, estimés si non précisés), moc (maquette ou set LEGO exposé, posé par le logiciel sur un meuble d'exposition assez grand : donne name, w, d et h = hauteur de la maquette, socle ou surélévation compris ; Rivendell LEGO 10316 = 72×50×39 cm).
 
 Réponds uniquement par un objet JSON de la forme :
 {"items":[{"key":"<clé>","n":1,"wall":"A","under":true,"underSlope":true,"corner":true,"center":true,"near":"porte","away":"porte","facing":"fenetre","seats":6,"chevets":2}],"slopes":[{"wall":"B","jamb":100,"len":210,"deg":40}],"comment":"<une phrase en français si une demande est impossible ou ambiguë, sinon vide>"}
@@ -2208,14 +2254,14 @@ document.getElementById("wishStop").onclick=()=>{ if(wishCtl) wishCtl.abort(); }
 /* ================= Liste & total ================= */
 function grouped(){
   const R=room(); const m=new Map();
-  for(const f of R.furniture){ const s=specOf(f); if(!s||s.kind==="rug") continue; const ex=!!f.existing;
+  for(const f of R.furniture){ const s=baseSpec(f); if(!s||s.kind==="rug") continue; const ex=!!f.existing;
     const k=(ex?"ex:":"")+(f.custom?"custom:"+s.name+f.w+f.d:f.key+":"+(f.pid||f.key)); const e=m.get(k)||{s:{...s,w:f.w,d:f.d},n:0,existing:ex}; e.n++; m.set(k,e); }
   // les meubles déjà présents ne comptent ni dans la liste d'achat ni dans le total
   return [...m.values()].filter(g=>!g.existing);
 }
 function groupedExisting(){
   const R=room(); const m=new Map();
-  for(const f of R.furniture){ const s=specOf(f); if(!s||s.kind==="rug"||!f.existing) continue; const k=s.name+f.w+f.d; const e=m.get(k)||{s:{...s,w:f.w,d:f.d},n:0}; e.n++; m.set(k,e); }
+  for(const f of R.furniture){ const s=baseSpec(f); if(!s||s.kind==="rug"||!f.existing) continue; const k=s.name+f.w+f.d; const e=m.get(k)||{s:{...s,w:f.w,d:f.d},n:0}; e.n++; m.set(k,e); }
   return [...m.values()];
 }
 function renderList(){
