@@ -168,6 +168,14 @@ summary{cursor:pointer;color:var(--accent);font-size:14.5px;padding:4px 0}
           <label class="row small" style="gap:6px"><input type="checkbox" id="scanSnap" checked> Redresser les angles à ±2,5°</label>
         </div>
         <div id="scanMsg"></div>
+        <div id="photoBox" hidden style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+          <h2>Importer une photo de plan</h2>
+          <p class="hint">Plan relevé à la main, croquis coté, plan de notaire ou d'agence. Ajoutez au besoin une deuxième photo (coupe du rampant, détail). Claude lit les cotes et refait la pièce ; ce qu'il a dû supposer s'affiche ensuite pour que vous le corrigiez.</p>
+          <label class="field">Précisions (facultatif)<textarea id="photoNote" rows="2" placeholder="Ex. : la porte fait 83 cm, hauteur sous plafond 2,45 m"></textarea></label>
+          <div class="row" style="margin-top:8px"><label class="btn primary">Choisir les photos<input id="photoFile" type="file" accept="image/*" multiple hidden></label></div>
+          <div id="photoMsg"></div>
+        </div>
+        <p id="photoOff" class="hint" hidden style="margin-top:10px">La lecture d'une photo de plan passe par Claude : ouvrez l'appli depuis Claude pour l'utiliser.</p>
       </div>
       <div class="grid2" style="margin-top:14px">
         <label class="field">Nom de la pièce<input id="rname" type="text"></label>
@@ -2214,8 +2222,10 @@ document.getElementById("addCustom").onclick=()=>{
 };
 
 /* ================= Description libre → aménagement ================= */
-let sampleFn=null;
-(async()=>{ try{ if(window.claude && typeof window.claude.use==="function") sampleFn=await window.claude.use("sample"); }catch(e){ sampleFn=null; } })();
+let sampleFn=null, photoMax=0;
+(async()=>{ try{ if(window.claude && typeof window.claude.use==="function") sampleFn=await window.claude.use("sample"); }catch(e){ sampleFn=null; }
+  try{ const lim=sampleFn && await sampleFn.limits(); photoMax=(lim&&lim.images&&lim.images.maxCount)||0; }catch(e){ photoMax=0; }
+  document.getElementById("photoBox").hidden=!photoMax; document.getElementById("photoOff").hidden=!!photoMax; })();
 function roomBrief(R,G){
   const walls=G.walls.map((w,i)=>`mur ${LET(i)} : ${fmtCm(w.len)} cm`).join(" ; ");
   const ops=R.openings.map(o=>`${OPN[o.type]} sur le mur ${LET(+o.wall)} (à ${o.pos} cm du coin ${+o.wall+1}, largeur ${o.width} cm${o.type==="window"?`, allège ${o.sill??90} cm`:""})`).join(" ; ")||"aucune";
@@ -2612,6 +2622,93 @@ document.getElementById("scanFile").onchange=async e=>{
   }
 };
 
+/* ================= Import d'une photo de plan (lecture par Claude) ================= */
+async function shrinkImage(file,max=2200){
+  const url=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((ok,ko)=>{ const i=new Image(); i.onload=()=>ok(i); i.onerror=()=>ko(new Error("Image illisible : prenez la photo en JPEG ou PNG.")); i.src=url; });
+    const k=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+    const c=document.createElement("canvas"); c.width=Math.round(img.naturalWidth*k); c.height=Math.round(img.naturalHeight*k);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+    return await new Promise((ok,ko)=>c.toBlob(b=>b?ok(b):ko(new Error("Image illisible.")),"image/jpeg",0.9));
+  } finally { URL.revokeObjectURL(url); }
+}
+function photoPrompt(note,n){
+  return `Tu lis ${n>1?`${n} photos (plan et détails/coupe) d'une même pièce`:"la photo d'un plan de pièce"}, souvent dessiné à la main et pas à l'échelle, pour la refaire dans un logiciel d'aménagement.
+
+Règles de lecture :
+- Les cotes écrites priment toujours sur les proportions du dessin. Convertis en centimètres : 3,61 m = 361 ; 1,295 m = 129.5 ; 91 cm = 91.
+- La feuille peut avoir été tournée : lis les textes dans tous les sens.
+- Rattache chaque cote à son segment grâce aux traits de rappel et aux petites barres ou flèches d'extrémité. Une petite cote désignée par une flèche mesure le détail que la flèche montre (décroché, épaisseur).
+- Décris le contour intérieur de la pièce : les murs dans l'ordre, en tournant dans le sens des aiguilles d'une montre tel qu'on voit la photo, depuis un coin. Pour chaque mur : len en cm et ang = angle intérieur au coin de fin (90 coin normal, 270 coin rentrant).
+- Un mur coupé par une ouverture garde sa longueur totale (ouverture comprise).
+- Le contour doit se refermer (somme des déplacements nulle sur les deux axes). Une longueur non cotée se déduit par fermeture, sinon par proportion du dessin : dans les deux cas, dis-le dans doubts avec la valeur retenue. Si les cotes écrites ne se referment pas, garde-les et donne l'écart dans doubts.
+- Un trou dans le trait d'un mur est une ouverture. Avec un arc de battement : porte ; hinge = "start" si les gonds sont du côté du début du mur (sens de parcours), sinon "end" ; swing = "in" si l'arc est dessiné dans la pièce. Sans arc : fenêtre (sill 95 par défaut, à signaler) ou passage (type "opening"). pos = distance du début du mur au début de l'ouverture. Si la largeur n'est pas cotée, déduis-la des cotes voisines et signale-le.
+- Rampant : mot « rampant », coupe (profil de la pente), hachures. La coupe donne jamb = hauteur au pied du rampant (jambette) et depth = profondeur horizontale du rampant au sol, depuis le mur jusqu'au haut de la pente (additionne les cotes horizontales successives, poutre comprise). wall = le mur au pied du rampant. height = hauteur sous plafond de la partie haute ; si elle n'est pas écrite, mets null et dis-le dans doubts. deg = angle de la pente s'il est écrit, sinon null.
+- Une panne ou poutre (rectangle hachuré) qui dépasse sous la pente : mets ses dimensions dans doubts.
+- Fenêtres de toit, radiateurs, poteaux, conduits, trémies : seulement s'ils sont dessinés.
+- Ne suppose jamais en silence : chaque supposition, déduction ou incertitude va dans doubts, en une phrase courte en français, avec la valeur retenue.
+${note?`
+Précisions de l'utilisateur, prioritaires sur la photo : ${note}
+`:""}
+Réponds uniquement par ce JSON (nombres en cm) :
+{"name":"nom de la pièce s'il est écrit","height":250,"walls":[{"len":361,"ang":90,"note":"ce que tu as lu pour ce mur"}],"openings":[{"type":"door","wall":1,"pos":175,"width":83,"hinge":"start","swing":"in"},{"type":"window","wall":0,"pos":300,"width":60,"sill":95}],"roofwins":[{"wall":0,"pos":100,"width":78,"from":40,"len":98}],"slopes":[{"wall":7,"jamb":102,"depth":257,"deg":null}],"obstacles":[{"type":"radiateur","wall":2,"pos":50,"width":80,"depth":10,"dist":0}],"doubts":["…"]}`;
+}
+function roomFromPhoto(res){
+  const num=(x,lo,hi)=>{ const v=+x; return isFinite(v)&&v>=lo&&v<=hi?Math.round(v*10)/10:null; };
+  const doubts=(Array.isArray(res&&res.doubts)?res.doubts:[]).filter(d=>typeof d==="string"&&d.trim()).map(d=>d.trim().slice(0,300));
+  const walls=(Array.isArray(res&&res.walls)?res.walls:[]).map(w=>({len:num(w&&w.len,5,3000),ang:num(w&&w.ang,10,350)||90})).filter(w=>w.len);
+  if(walls.length<3) throw new Error("Le contour de la pièce n'a pas pu être lu sur la photo. Essayez une photo plus nette, prise bien à plat, ou ajoutez des précisions.");
+  const n=walls.length, wi=x=>{ const i=Math.round(+x); return Number.isInteger(i)&&i>=0&&i<n?i:null; };
+  let H=num(res.height,180,600);
+  const slopes=(Array.isArray(res.slopes)?res.slopes:[]).map(sl=>({wall:wi(sl&&sl.wall),jamb:num(sl&&sl.jamb,0,400),depth:num(sl&&sl.depth,10,1000),deg:num(sl&&sl.deg,5,80)})).filter(sl=>sl.wall!=null&&sl.jamb!=null&&sl.depth);
+  if(!H){ const sl=slopes.find(x=>x.deg);
+    if(sl){ H=Math.round(sl.jamb+sl.depth*Math.tan(sl.deg*Math.PI/180)); doubts.push(`Hauteur sous plafond calculée avec la pente : ${H} cm.`); }
+    else { H=250; doubts.push("Hauteur sous plafond non écrite : 250 cm retenus. Corrigez-la dans « Hauteur sous plafond » : elle fixe la pente du rampant."); } }
+  for(const sl of slopes) if(sl.jamb<H) walls[sl.wall].slope={on:true,jamb:sl.jamb,depth:sl.depth};
+  const openings=[];
+  for(const o of (Array.isArray(res.openings)?res.openings:[])){
+    const w=wi(o&&o.wall), width=num(o&&o.width,20,600), pos=num(o&&o.pos,0,3000); if(w==null||!width) continue;
+    const type=["door","window","opening"].includes(o.type)?o.type:"window";
+    const op={id:uid(),type,wall:w,pos:Math.min(pos||0,Math.max(0,walls[w].len-width)),width};
+    if(type==="door"){ op.hinge=o.hinge==="end"?"end":"start"; op.swing=o.swing==="out"?"out":"in"; }
+    if(type==="window") op.sill=num(o.sill,0,250)??95;
+    openings.push(op);
+  }
+  for(const o of (Array.isArray(res.roofwins)?res.roofwins:[])){
+    const w=wi(o&&o.wall); if(w==null||!walls[w].slope) continue;
+    openings.push({id:uid(),type:"roofwin",wall:w,pos:num(o.pos,0,3000)||0,width:num(o.width,20,300)||78,from:num(o.from,0,800)||0,len:num(o.len,20,300)||98});
+  }
+  const obstacles=[];
+  for(const o of (Array.isArray(res.obstacles)?res.obstacles:[])){
+    const w=wi(o&&o.wall), t=OBS[o&&o.type]?o.type:"autre"; if(w==null) continue; const d=OBS[t];
+    obstacles.push({id:uid(),type:t,wall:w,pos:num(o.pos,0,3000)||0,width:num(o.width,5,500)||d.width,depth:num(o.depth,5,500)||d.depth,height:d.height,dist:num(o.dist,0,500)||0});
+  }
+  const name=typeof res.name==="string"&&res.name.trim()?res.name.trim().slice(0,40):"Plan photo";
+  return {name,height:H,walls,openings,obstacles,doubts};
+}
+document.getElementById("photoFile").onchange=async e=>{
+  const files=[...e.target.files].slice(0,photoMax||1); e.target.value=""; if(!files.length||!sampleFn) return;
+  const msg=document.getElementById("photoMsg"), note=document.getElementById("photoNote").value.trim();
+  msg.innerHTML=`<div class="status ok">Lecture du plan par Claude… (une à deux minutes)</div>`;
+  try{
+    const imgs=await Promise.all(files.map(f=>shrinkImage(f)));
+    const res=await sampleFn.json(photoPrompt(note,imgs.length),{images:imgs,modelTier:"complex",cache:false});
+    const P=roomFromPhoto(res);
+    const r=defaultRoom(); r.name=P.name; r.height=P.height; r.walls=P.walls; r.openings=P.openings; r.obstacles=P.obstacles; r.furniture=[]; r.usage="";
+    S.rooms.push(r); S.cur=r.id; selId=null; props=[]; save(); renderAll(true);
+    let G=buildGeom(r), closing="";
+    if(G.closeErr>1){ const gap=G.closeErr; document.getElementById("closeWall").click(); closing=` Les cotes ne se referment pas tout à fait : écart de ${fmtCm(gap)} cm reporté sur le dernier mur.`; G=buildGeom(room()); }
+    const sl=r.walls.map((w,i)=>w.slope?`mur ${String.fromCharCode(65+i)} sous rampant (pied ${fmtCm(w.slope.jamb)} cm, profondeur ${fmtCm(w.slope.depth)} cm)`:null).filter(Boolean);
+    msg.innerHTML=`<div class="status ok">Plan lu : ${r.walls.length} murs, ${r.openings.length} ouverture(s), ${(G.area/10000).toLocaleString("fr-FR",{maximumFractionDigits:2})} m² au sol, hauteur ${fmtCm(r.height)} cm${sl.length?", "+sl.join(", "):""}.${closing} Comparez le plan avec votre dessin, puis passez à Aménager.</div>`
+      +(P.doubts.length?`<div class="status warn"><b>À vérifier</b><br>${P.doubts.map(esc).join("<br>")}</div>`:"");
+  }catch(err){
+    if(err&&(err.code==="not_granted"||err.code==="sampling_disabled")){ msg.innerHTML=`<div class="status warn">Claude n'a pas l'autorisation de lire la photo. Autorisez-le puis réessayez.</div>`; return; }
+    if(err&&err.code==="rate_limited"){ msg.innerHTML=`<div class="status warn">Trop de demandes à la suite : réessayez dans une minute.</div>`; return; }
+    msg.innerHTML=`<div class="status warn">${esc((err&&err.message&&!err.code)?err.message:"La photo n'a pas pu être lue. Essayez une photo plus nette, prise bien à plat.")}</div>`;
+  }
+};
+
 /* ================= Gestion des pièces & exports ================= */
 document.getElementById("newRoom").onclick=()=>{ const r=defaultRoom(); r.name="Pièce "+(S.rooms.length+1); r.openings=[]; S.rooms.push(r); S.cur=r.id; selId=null; props=[]; save(); renderAll(true); };
 document.getElementById("dupRoom").onclick=()=>{ const r=JSON.parse(JSON.stringify(room())); r.id=uid(); r.name+=" (copie)"; S.rooms.push(r); S.cur=r.id; save(); renderAll(true); };
@@ -2754,7 +2851,7 @@ window.addEventListener("resize",()=>render(true));
 renderAll(true);
 if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
 // accès pour les tests
-window.__PP={pickChoice,applyChoice,resetCat,runLayout,famProducts,prodSpec,scanToRooms,scanFaces,enterHome,leaveHome,sanitizeProgram,CAT,proposals,parseWish,validateProgram,describeProgram,runProgram,normalizeScan,scanToRoom,buildGeom,proposals,checkAll,room:()=>room(),S:()=>S,render,applyProp:(r,u)=>{}};
+window.__PP={roomFromPhoto,photoPrompt,pickChoice,applyChoice,resetCat,runLayout,famProducts,prodSpec,scanToRooms,scanFaces,enterHome,leaveHome,sanitizeProgram,CAT,proposals,parseWish,validateProgram,describeProgram,runProgram,normalizeScan,scanToRoom,buildGeom,proposals,checkAll,room:()=>room(),S:()=>S,render,applyProp:(r,u)=>{}};
 </script>
 </body>
 </html>
