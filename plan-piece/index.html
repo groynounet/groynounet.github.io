@@ -547,6 +547,8 @@ function buildGeom(room){
 function ceilingAt(G,p){
   let h=G.H;
   for(const w of G.walls){ if(!w.slope) continue;
+    // le rampant suit son mur : au-delà des extrémités du mur (renfoncement, autre partie), plafond droit
+    const t=V.dot(V.sub(p,w.A),w.u); if(t<-1||t>w.len+1) continue;
     const d=Math.max(0,V.dot(V.sub(p,w.A),w.n));
     h=Math.min(h, w.slope.jamb+(G.H-w.slope.jamb)*Math.min(1,d/w.slope.depth)); }
   return h;
@@ -1591,7 +1593,7 @@ function render(fit){
     G.walls.forEach((w,i)=>{ if(!w.slope) return;
       const {jamb,depth}=w.slope;
       const x180 = jamb>=180?0 : (G.H<=180? big : depth*(180-jamb)/(G.H-jamb));
-      const a=V.sub(w.A,V.mul(w.u,big)), b=V.add(w.B,V.mul(w.u,big));
+      const a=w.A, b=w.B;
       if(x180>0){
         const a2=V.add(a,V.mul(w.n,x180)), b2=V.add(b,V.mul(w.n,x180));
         s+=`<polygon points="${[a,b,b2,a2].map(q=>q.join(",")).join(" ")}" fill="url(#hatch)" clip-path="url(#roomclip)"/>`;
@@ -2644,7 +2646,7 @@ Règles de lecture :
 - Un mur coupé par une ouverture garde sa longueur totale (ouverture comprise).
 - Le contour doit se refermer (somme des déplacements nulle sur les deux axes). Une longueur non cotée se déduit par fermeture, sinon par proportion du dessin : dans les deux cas, dis-le dans doubts avec la valeur retenue. Si les cotes écrites ne se referment pas, garde-les et donne l'écart dans doubts.
 - Un trou dans le trait d'un mur est une ouverture. Avec un arc de battement : porte ; hinge = "start" si les gonds sont du côté du début du mur (sens de parcours), sinon "end" ; swing = "in" si l'arc est dessiné dans la pièce. Sans arc : fenêtre (sill 95 par défaut, à signaler) ou passage (type "opening"). pos = distance du début du mur au début de l'ouverture. Si la largeur n'est pas cotée, déduis-la des cotes voisines et signale-le.
-- Rampant : mot « rampant », coupe (profil de la pente), hachures. La coupe donne jamb = hauteur au pied du rampant (jambette) et depth = profondeur horizontale du rampant au sol, depuis le mur jusqu'au haut de la pente (additionne les cotes horizontales successives, poutre comprise). wall = le mur au pied du rampant. height = hauteur sous plafond de la partie haute ; si elle n'est pas écrite, mets null et dis-le dans doubts. deg = angle de la pente s'il est écrit, sinon null.
+- Rampant : mot « rampant », coupe (profil de la pente), hachures. La coupe donne jamb = hauteur au pied du rampant (jambette) et depth = profondeur horizontale du rampant au sol, depuis le mur jusqu'au haut de la pente (additionne les cotes horizontales successives, poutre comprise). wall = le mur au pied du rampant. Si le rampant ne couvre qu'une partie d'un mur droit (le reste a un plafond droit), coupe ce mur en deux murs alignés (ang 180 entre les deux) et mets le rampant sur la seule partie concernée. height = hauteur sous plafond de la partie haute ; si elle n'est pas écrite, mets null et dis-le dans doubts. deg = angle de la pente s'il est écrit, sinon null.
 - Une panne ou poutre (rectangle hachuré) qui dépasse sous la pente : mets ses dimensions dans doubts.
 - Fenêtres de toit, radiateurs, poteaux, conduits, trémies : seulement s'ils sont dessinés.
 - Ne suppose jamais en silence : chaque supposition, déduction ou incertitude va dans doubts, en une phrase courte en français, avec la valeur retenue.
